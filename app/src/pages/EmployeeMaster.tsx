@@ -246,6 +246,9 @@ export function EmployeeMaster() {
 
         let successCount = 0;
         const errors: string[] = [];
+        // 同一インポート内での重複を防ぐためのSet
+        const processedCodes = new Set<string>();
+        const processedNames = new Set<string>();
 
         jsonData.forEach((row, index) => {
           const rowNum = index + 2; // ヘッダー行を考慮
@@ -265,6 +268,17 @@ export function EmployeeMaster() {
 
           // 社員コードとアカウント
           const employeeCode = String(row['EmployeeCode'] || row['社員コード'] || '').trim();
+
+          // 同一インポート内での重複チェック
+          if (employeeCode && processedCodes.has(employeeCode)) {
+            // 既にこのインポートで処理済み、スキップ
+            return;
+          }
+          if (!employeeCode && processedNames.has(name)) {
+            // 社員コードがなく、同名が既に処理済み、スキップ
+            return;
+          }
+
           const account = String(row['Account'] || row['アカウント'] || '').trim();
 
           // JOBRANK変換 (BCON形式対応)
@@ -372,6 +386,13 @@ export function EmployeeMaster() {
               department: department || undefined,
             });
           }
+
+          // 処理済みとしてマーク（同一インポート内での重複防止）
+          if (employeeCode) {
+            processedCodes.add(employeeCode);
+          }
+          processedNames.add(name);
+
           successCount++;
         });
 
