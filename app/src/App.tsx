@@ -6,6 +6,7 @@ import { YearlyEvaluation } from './pages/YearlyEvaluation';
 import { SkillMap } from './pages/SkillMap';
 import { Organization } from './pages/Organization';
 import { Budget } from './pages/Budget';
+import { BudgetSimulation } from './pages/BudgetSimulation';
 import { UnitPriceMaster } from './pages/UnitPriceMaster';
 import './index.css';
 
@@ -22,6 +23,7 @@ function App() {
             <Route path="/organization" element={<Organization />} />
             <Route path="/unit-price" element={<UnitPriceMaster />} />
             <Route path="/budget" element={<Budget />} />
+            <Route path="/budget-simulation" element={<BudgetSimulation />} />
           </Routes>
         </div>
       </Router>

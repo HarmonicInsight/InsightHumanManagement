@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Network, Settings, Wallet, Award, UserCog, Radar, Calculator } from 'lucide-react';
+import { Network, Settings, Wallet, Award, UserCog, Radar, Calculator, TrendingUp } from 'lucide-react';
 import './Sidebar.css';
 
 export function Sidebar() {
@@ -30,9 +30,16 @@ export function Sidebar() {
           <span>単価マスタ</span>
         </NavLink>
 
+        <div className="nav-section">予算管理</div>
+
         <NavLink to="/budget" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <Wallet size={20} />
           <span>予算管理</span>
+        </NavLink>
+
+        <NavLink to="/budget-simulation" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <TrendingUp size={20} />
+          <span>予算シミュレーション</span>
         </NavLink>
 
         <div className="nav-section">評価・スキル</div>
