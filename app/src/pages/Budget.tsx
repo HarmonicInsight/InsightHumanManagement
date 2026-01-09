@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
-import { Plus, Edit2, Trash2, DollarSign, Users, UserPlus, ChevronDown, ChevronRight, TrendingUp, Settings } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors, DefaultAgentFeeRate, RankOrder } from '../types';
@@ -8,11 +8,10 @@ import './Budget.css';
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; // 1月〜12月
 const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
+const RANKS: Rank[] = ['DIR', 'SMGR', 'MGR', 'Scon', 'CONS'];
 
 export function Budget() {
   const {
-    currentYear,
     members,
     teams,
     budget,
@@ -26,7 +25,8 @@ export function Budget() {
   const [editingHire, setEditingHire] = useState<NewHire | null>(null);
   const [isAddingHire, setIsAddingHire] = useState(false);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set(['unassigned', ...teams.map(t => t.id)]));
-  const [multiplier, setMultiplier] = useState<number>(1.4); // 倍率 (デフォルト1.4)
+  const [globalMultiplier, setGlobalMultiplier] = useState<number>(1.4); // 一括倍率
+  const [memberMultipliers, setMemberMultipliers] = useState<Record<string, number>>({}); // 個別倍率
   const [hireForm, setHireForm] = useState({
     name: '',
     rank: 'CONS' as Rank,
@@ -112,9 +112,29 @@ export function Budget() {
     return getUnitPrice(rank) * 12;
   };
 
+  // メンバーの倍率を取得（個別設定があればそれを、なければグローバル値を使用）
+  const getMemberMultiplier = (memberId: string): number => {
+    return memberMultipliers[memberId] ?? globalMultiplier;
+  };
+
+  // 個別倍率を設定
+  const setMemberMultiplier = (memberId: string, value: number) => {
+    setMemberMultipliers(prev => ({ ...prev, [memberId]: value }));
+  };
+
+  // 一括倍率を全員に反映
+  const applyGlobalMultiplier = () => {
+    const newMultipliers: Record<string, number> = {};
+    members.forEach(m => {
+      newMultipliers[m.id] = globalMultiplier;
+    });
+    setMemberMultipliers(newMultipliers);
+  };
+
   // 管理給与の計算 (給与 × 倍率)
-  const calculateManagedSalary = (baseSalary: number): number => {
-    return Math.round(baseSalary * multiplier * 10) / 10;
+  const calculateManagedSalary = (baseSalary: number, memberId: string): number => {
+    const mult = getMemberMultiplier(memberId);
+    return Math.round(baseSalary * mult * 10) / 10;
   };
 
   // 管理給与の年間合計
@@ -125,7 +145,7 @@ export function Budget() {
     MONTHS.forEach((month) => {
       const monthSalary = salary.monthlySalaries[month];
       const baseSalary = (monthSalary !== null && monthSalary !== undefined) ? monthSalary : unitPrice;
-      total += calculateManagedSalary(baseSalary);
+      total += calculateManagedSalary(baseSalary, memberId);
     });
     return total;
   };
@@ -162,8 +182,6 @@ export function Budget() {
     0
   );
 
-  const totalLaborCost = totalMemberManagedSalary + totalNewHireSalary + totalAgentFees;
-
   // チーム別標準原価合計を計算
   const calculateTeamUnitPriceTotal = (teamId: string | null) => {
     return members
@@ -171,11 +189,17 @@ export function Budget() {
       .reduce((sum, m) => sum + calculateMemberUnitPriceTotal(m.rank), 0);
   };
 
-  const maxTeamUnitPrice = Math.max(
-    ...teams.map((t) => calculateTeamUnitPriceTotal(t.id)),
-    calculateTeamUnitPriceTotal(null),
-    1
-  );
+  // チーム別管理給与合計を計算
+  const calculateTeamManagedSalaryTotal = (teamId: string | null) => {
+    return members
+      .filter((m) => m.teamId === teamId)
+      .reduce((sum, m) => sum + calculateMemberManagedSalaryTotal(m.id, m.rank), 0);
+  };
+
+  // チーム別メンバー数を計算
+  const getTeamMemberCount = (teamId: string | null) => {
+    return members.filter((m) => m.teamId === teamId).length;
+  };
 
   const handleSaveHire = () => {
     if (!hireForm.name.trim()) return;
@@ -240,7 +264,8 @@ export function Budget() {
       const unitPriceTotal = calculateMemberUnitPriceTotal(member.rank);
       const managedSalaryTotal = calculateMemberManagedSalaryTotal(member.id, member.rank);
       const baseSalary = getMemberBaseSalary(member.id);
-      const managedBaseSalary = baseSalary !== null ? calculateManagedSalary(baseSalary) : calculateManagedSalary(unitPrice);
+      const memberMult = getMemberMultiplier(member.id);
+      const managedBaseSalary = baseSalary !== null ? calculateManagedSalary(baseSalary, member.id) : calculateManagedSalary(unitPrice, member.id);
       return (
         <Fragment key={member.id}>
           {/* 標準単価行 */}
@@ -275,7 +300,15 @@ export function Budget() {
               />
             </td>
             <td className="sticky-col-5" rowSpan={2}>
-              <span className="multiplier-display">×{multiplier}</span>
+              <input
+                type="number"
+                className="multiplier-input-small"
+                value={memberMult}
+                onChange={(e) => setMemberMultiplier(member.id, Number(e.target.value) || 1)}
+                step={0.1}
+                min={1}
+                max={3}
+              />
             </td>
             <td className="sticky-col-6" rowSpan={2}>
               <span className="managed-salary-display">{managedBaseSalary}</span>
@@ -292,7 +325,7 @@ export function Budget() {
             {MONTHS.map((month) => {
               const monthSalary = salary.monthlySalaries[month];
               const baseSalaryForMonth = (monthSalary !== null && monthSalary !== undefined) ? monthSalary : unitPrice;
-              const managedValue = calculateManagedSalary(baseSalaryForMonth);
+              const managedValue = calculateManagedSalary(baseSalaryForMonth, member.id);
               return (
                 <td key={month} className="managed-cell">{managedValue}</td>
               );
@@ -373,89 +406,46 @@ export function Budget() {
         <YearSelector />
       </div>
 
-      {/* チーム別標準原価サマリー */}
-      <div className="budget-summary-card">
-        <div className="budget-summary-header">
-          <h3>FY{String(currentYear).slice(2)} 標準原価</h3>
-          <div className="budget-summary-total">
-            <TrendingUp size={18} />
-            <span>{totalMemberUnitPrice.toLocaleString()}万円</span>
+      {/* チーム別サマリーテーブル */}
+      <div className="team-summary-grid">
+        {/* 合計カード */}
+        <div className="team-summary-card total">
+          <div className="team-summary-header">
+            <span className="team-summary-title">合計</span>
+          </div>
+          <div className="team-summary-row">
+            <span className="team-summary-label">人数</span>
+            <span className="team-summary-value">{members.length}名</span>
+          </div>
+          <div className="team-summary-row">
+            <span className="team-summary-label">標準単価</span>
+            <span className="team-summary-value">{totalMemberUnitPrice.toLocaleString()}</span>
+          </div>
+          <div className="team-summary-row highlight">
+            <span className="team-summary-label">管理給与</span>
+            <span className="team-summary-value">{totalMemberManagedSalary.toLocaleString()}</span>
           </div>
         </div>
-        <div className="budget-summary-bars">
-          {teams.map((team) => {
-            const teamTotal = calculateTeamUnitPriceTotal(team.id);
-            const teamMemberCount = members.filter((m) => m.teamId === team.id).length;
-            const percentage = (teamTotal / maxTeamUnitPrice) * 100;
-            return (
-              <div key={team.id} className="budget-summary-row">
-                <div className="budget-summary-label" style={{ color: team.color }}>{team.name}</div>
-                <div className="budget-summary-bar-container">
-                  <div
-                    className="budget-summary-bar"
-                    style={{ width: `${percentage}%`, background: team.color }}
-                  />
-                </div>
-                <div className="budget-summary-info">
-                  <span className="budget-summary-count">{teamMemberCount}名</span>
-                  <span className="budget-summary-amount">{teamTotal.toLocaleString()}</span>
-                </div>
-              </div>
-            );
-          })}
-          {(() => {
-            const unassignedTotal = calculateTeamUnitPriceTotal(null);
-            const unassignedCount = members.filter((m) => !m.teamId).length;
-            if (unassignedCount === 0) return null;
-            return (
-              <div className="budget-summary-row">
-                <div className="budget-summary-label" style={{ color: '#9CA3AF' }}>未所属</div>
-                <div className="budget-summary-bar-container">
-                  <div
-                    className="budget-summary-bar"
-                    style={{ width: `${(unassignedTotal / maxTeamUnitPrice) * 100}%`, background: '#9CA3AF' }}
-                  />
-                </div>
-                <div className="budget-summary-info">
-                  <span className="budget-summary-count">{unassignedCount}名</span>
-                  <span className="budget-summary-amount">{unassignedTotal.toLocaleString()}</span>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      </div>
-
-      {/* サマリーカード */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">標準単価合計</div>
-          <div className="stat-value">{totalMemberUnitPrice.toLocaleString()}万円</div>
-          <div className="stat-icon">
-            <Users size={24} color="#3B82F6" />
+        {/* 各チームカード */}
+        {teams.map((team) => (
+          <div key={team.id} className="team-summary-card" style={{ borderTopColor: team.color }}>
+            <div className="team-summary-header">
+              <span className="team-summary-title" style={{ color: team.color }}>{team.name}</span>
+            </div>
+            <div className="team-summary-row">
+              <span className="team-summary-label">人数</span>
+              <span className="team-summary-value">{getTeamMemberCount(team.id)}名</span>
+            </div>
+            <div className="team-summary-row">
+              <span className="team-summary-label">標準単価</span>
+              <span className="team-summary-value">{calculateTeamUnitPriceTotal(team.id).toLocaleString()}</span>
+            </div>
+            <div className="team-summary-row highlight">
+              <span className="team-summary-label">管理給与</span>
+              <span className="team-summary-value">{calculateTeamManagedSalaryTotal(team.id).toLocaleString()}</span>
+            </div>
           </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">管理給与合計 (×{multiplier})</div>
-          <div className="stat-value">{totalMemberManagedSalary.toLocaleString()}万円</div>
-          <div className="stat-icon">
-            <Users size={24} color="#DB2777" />
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">新規採用費用</div>
-          <div className="stat-value">{(totalNewHireSalary + totalAgentFees).toLocaleString()}万円</div>
-          <div className="stat-icon">
-            <UserPlus size={24} color="#F59E0B" />
-          </div>
-        </div>
-        <div className="stat-card highlight">
-          <div className="stat-label">トータル人件費</div>
-          <div className="stat-value">{totalLaborCost.toLocaleString()}万円</div>
-          <div className="stat-icon">
-            <DollarSign size={24} color="#8B5CF6" />
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* メンバー別単価・給与一覧 */}
@@ -464,16 +454,19 @@ export function Budget() {
           <h3 className="card-title">メンバー別単価・給与一覧</h3>
           <div className="multiplier-control">
             <Settings size={16} />
-            <span>倍率:</span>
+            <span>一括倍率:</span>
             <input
               type="number"
               className="multiplier-input"
-              value={multiplier}
-              onChange={(e) => setMultiplier(Number(e.target.value) || 1)}
+              value={globalMultiplier}
+              onChange={(e) => setGlobalMultiplier(Number(e.target.value) || 1)}
               step={0.1}
               min={1}
               max={3}
             />
+            <button className="btn-apply" onClick={applyGlobalMultiplier}>
+              全員に反映
+            </button>
           </div>
         </div>
         <div className="salary-table-container">

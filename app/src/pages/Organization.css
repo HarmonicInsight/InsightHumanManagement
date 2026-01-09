@@ -6,8 +6,6 @@
 }
 
 .org-sidebar {
-  position: sticky;
-  top: 24px;
   height: fit-content;
 }
 
@@ -27,7 +25,7 @@
 .member-list {
   padding: 12px;
   min-height: 200px;
-  max-height: calc(100vh - 300px);
+  max-height: 500px;
   overflow-y: auto;
   border-radius: 8px;
   transition: background 0.2s;
@@ -347,9 +345,10 @@
 /* Organization Rank Tables */
 .org-summary-tables {
   display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 24px;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 
 .org-rank-table {
@@ -357,7 +356,8 @@
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  min-width: 160px;
+  min-width: 140px;
+  flex-shrink: 0;
 }
 
 .org-rank-table-header {

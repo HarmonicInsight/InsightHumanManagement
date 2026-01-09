@@ -1,90 +1,71 @@
-/* Budget Summary Card */
-.budget-summary-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+/* Team Summary Grid */
+.team-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
   margin-bottom: 24px;
 }
 
-.budget-summary-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+.team-summary-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  border-top: 3px solid var(--gray-300);
+}
+
+.team-summary-card.total {
+  border-top-color: #8B5CF6;
+  background: linear-gradient(to bottom, #F5F3FF, white);
+}
+
+.team-summary-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--gray-100);
 }
 
-.budget-summary-header h3 {
-  margin: 0;
-  font-size: 18px;
+.team-summary-title {
+  font-size: 15px;
   font-weight: 700;
   color: var(--gray-800);
 }
 
-.budget-summary-total {
+.team-summary-card.total .team-summary-title {
+  color: #8B5CF6;
+}
+
+.team-summary-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 6px;
-  color: #3B82F6;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.budget-summary-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.budget-summary-row {
-  display: grid;
-  grid-template-columns: 80px 1fr 100px;
-  align-items: center;
-  gap: 12px;
-}
-
-.budget-summary-label {
+  padding: 6px 0;
   font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.budget-summary-bar-container {
-  height: 24px;
-  background: var(--gray-100);
-  border-radius: 4px;
-  overflow: hidden;
+.team-summary-row.highlight {
+  background: #FDF2F8;
+  margin: 6px -12px -12px;
+  padding: 10px 12px;
+  border-radius: 0 0 8px 8px;
 }
 
-.budget-summary-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-  min-width: 4px;
-}
-
-.budget-summary-info {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.budget-summary-count {
-  font-size: 12px;
+.team-summary-label {
   color: var(--gray-500);
 }
 
-.budget-summary-amount {
-  font-size: 13px;
+.team-summary-value {
   font-weight: 600;
-  color: var(--gray-700);
-  min-width: 50px;
-  text-align: right;
+  color: var(--gray-800);
+}
+
+.team-summary-row.highlight .team-summary-label {
+  color: #DB2777;
+}
+
+.team-summary-row.highlight .team-summary-value {
+  color: #DB2777;
+  font-size: 14px;
 }
 
 .card-subtitle {
@@ -356,6 +337,40 @@
   outline: none;
   border-color: #DB2777;
   box-shadow: 0 0 0 2px rgba(219, 39, 119, 0.1);
+}
+
+.multiplier-input-small {
+  width: 50px;
+  padding: 4px 6px;
+  border: 1px solid #F9A8D4;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: #DB2777;
+  background: white;
+}
+
+.multiplier-input-small:focus {
+  outline: none;
+  border-color: #DB2777;
+  box-shadow: 0 0 0 2px rgba(219, 39, 119, 0.1);
+}
+
+.btn-apply {
+  padding: 4px 12px;
+  background: #DB2777;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-apply:hover {
+  background: #BE185D;
 }
 
 .multiplier-display {
