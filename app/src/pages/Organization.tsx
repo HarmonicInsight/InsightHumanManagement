@@ -1,35 +1,65 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Users, X } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import type { DropResult } from '@hello-pangea/dnd';
+import { Plus, Edit2, Trash2, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
-import { RankLabels, RankOrder, TeamColors } from '../types';
-import type { Team } from '../types';
+import { RankLabels, RankColors, TeamColors } from '../types';
+import type { Team, Rank } from '../types';
 import '../components/YearSelector.css';
+import './Organization.css';
+
+const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
 
 export function Organization() {
   const { members, teams, addTeam, updateTeam, deleteTeam, updateMember } = useApp();
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: '', leaderId: '', color: TeamColors[0] });
-
-  const seniorManagers = members.filter((m) => m.rank === 'SMGR');
-  const managers = members.filter((m) => m.rank === 'MGR');
-  const seniorConsultants = members.filter((m) => m.rank === 'Scon');
-  const consultants = members.filter((m) => m.rank === 'CONS');
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set(teams.map((t) => t.id)));
 
   const unassignedMembers = members.filter((m) => !m.teamId);
 
-  const getTeamMembers = (teamId: string) =>
-    members.filter((m) => m.teamId === teamId).sort((a, b) => RankOrder[b.rank] - RankOrder[a.rank]);
+  const getTeamMembersByRank = (teamId: string, rank: Rank) =>
+    members.filter((m) => m.teamId === teamId && m.rank === rank);
 
+  const toggleTeamExpanded = (teamId: string) => {
+    setExpandedTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, draggableId } = result;
+    if (!destination) return;
+
+    const memberId = draggableId;
+    const member = members.find((m) => m.id === memberId);
+    if (!member) return;
+
+    // Parse destination droppableId: "team-{teamId}-{rank}" or "unassigned"
+    if (destination.droppableId === 'unassigned') {
+      updateMember({ ...member, teamId: null });
+    } else if (destination.droppableId.startsWith('team-')) {
+      const parts = destination.droppableId.split('-');
+      const teamId = parts[1];
+      updateMember({ ...member, teamId });
+    }
+  };
 
   const handleSaveTeam = () => {
     if (!teamForm.name.trim()) return;
     if (editingTeam) {
       updateTeam({ ...editingTeam, name: teamForm.name, leaderId: teamForm.leaderId || null, color: teamForm.color });
     } else {
-      addTeam({ name: teamForm.name, leaderId: teamForm.leaderId || null, color: teamForm.color });
+      const newTeam = { name: teamForm.name, leaderId: teamForm.leaderId || null, color: teamForm.color };
+      addTeam(newTeam);
     }
     setEditingTeam(null);
     setIsAddingTeam(false);
@@ -39,13 +69,6 @@ export function Organization() {
   const handleDeleteTeam = (team: Team) => {
     if (confirm(`チーム「${team.name}」を削除しますか？メンバーは未所属になります。`)) {
       deleteTeam(team.id);
-    }
-  };
-
-  const handleAssignToTeam = (memberId: string, teamId: string | null) => {
-    const member = members.find((m) => m.id === memberId);
-    if (member) {
-      updateMember({ ...member, teamId });
     }
   };
 
@@ -59,240 +82,206 @@ export function Organization() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 className="page-title">組織体制</h1>
-          <p className="page-subtitle">チーム構成と階層</p>
+          <p className="page-subtitle">ドラッグ&ドロップでメンバーをチームに配置</p>
         </div>
         <YearSelector />
       </div>
 
-      {/* チーム一覧 */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">チーム</h3>
-          <button className="btn-primary" onClick={() => setIsAddingTeam(true)}>
-            <Plus size={16} style={{ marginRight: 4 }} />
-            チーム追加
-          </button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-          {teams.map((team) => {
-            const teamMembers = getTeamMembers(team.id);
-            const leader = members.find((m) => m.id === team.leaderId);
-            return (
-              <div
-                key={team.id}
-                style={{
-                  border: `2px solid ${team.color}`,
-                  borderRadius: 12,
-                  padding: 16,
-                  background: `linear-gradient(135deg, ${team.color}10, white)`,
-                  cursor: 'pointer',
-                }}
-                onClick={() => setSelectedTeam(team)}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: 16, color: team.color }}>{team.name}</h4>
-                    {leader && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B7280' }}>リーダー: {leader.name}</p>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditTeam(team);
-                      }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4 }}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTeam(team);
-                      }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: 4 }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Users size={14} color="#6B7280" />
-                  <span style={{ fontSize: 13, color: '#6B7280' }}>{teamMembers.length}名</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 12 }}>
-                  {teamMembers.slice(0, 6).map((m) => (
-                    <div
-                      key={m.id}
-                      className="member-avatar"
-                      style={{ width: 32, height: 32, fontSize: 12 }}
-                      title={m.name}
-                    >
-                      {m.name.charAt(0)}
-                    </div>
-                  ))}
-                  {teamMembers.length > 6 && (
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: '50%',
-                        background: '#E5E7EB',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 11,
-                        color: '#6B7280',
-                      }}
-                    >
-                      +{teamMembers.length - 6}
-                    </div>
-                  )}
-                </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="org-layout">
+          {/* 左側: 未所属メンバー一覧 */}
+          <div className="org-sidebar">
+            <div className="card" style={{ height: '100%' }}>
+              <div className="card-header">
+                <h3 className="card-title">未所属メンバー</h3>
+                <span className="member-count">{unassignedMembers.length}</span>
               </div>
-            );
-          })}
 
-          {/* 未所属 */}
-          {unassignedMembers.length > 0 && (
-            <div
-              style={{
-                border: '2px dashed #D1D5DB',
-                borderRadius: 12,
-                padding: 16,
-                background: '#F9FAFB',
-              }}
-            >
-              <h4 style={{ margin: 0, fontSize: 16, color: '#6B7280' }}>未所属</h4>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <Users size={14} color="#6B7280" />
-                <span style={{ fontSize: 13, color: '#6B7280' }}>{unassignedMembers.length}名</span>
+              <Droppable droppableId="unassigned">
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`member-list ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
+                  >
+                    {unassignedMembers.length === 0 ? (
+                      <div className="empty-state">全員が所属済みです</div>
+                    ) : (
+                      unassignedMembers.map((member, index) => (
+                        <Draggable key={member.id} draggableId={member.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`member-card ${snapshot.isDragging ? 'dragging' : ''}`}
+                              style={{
+                                ...provided.draggableProps.style,
+                                borderLeftColor: RankColors[member.rank],
+                              }}
+                            >
+                              <GripVertical size={14} className="drag-handle" />
+                              <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
+                                {member.name.charAt(0)}
+                              </div>
+                              <div className="member-details">
+                                <div className="member-name">{member.name}</div>
+                                <span
+                                  className="rank-badge"
+                                  style={{ background: `${RankColors[member.rank]}20`, color: RankColors[member.rank] }}
+                                >
+                                  {RankLabels[member.rank]}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
+          </div>
+
+          {/* 右側: チームツリー */}
+          <div className="org-main">
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">チーム構成</h3>
+                <button className="btn-primary" onClick={() => setIsAddingTeam(true)}>
+                  <Plus size={16} style={{ marginRight: 4 }} />
+                  チーム追加
+                </button>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 12 }}>
-                {unassignedMembers.slice(0, 6).map((m) => (
-                  <div
-                    key={m.id}
-                    className="member-avatar"
-                    style={{ width: 32, height: 32, fontSize: 12, background: '#9CA3AF' }}
-                    title={m.name}
-                  >
-                    {m.name.charAt(0)}
-                  </div>
-                ))}
-                {unassignedMembers.length > 6 && (
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      background: '#E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 11,
-                      color: '#6B7280',
-                    }}
-                  >
-                    +{unassignedMembers.length - 6}
-                  </div>
+
+              <div className="team-list">
+                {teams.length === 0 ? (
+                  <div className="empty-state">チームがありません。追加してください。</div>
+                ) : (
+                  teams.map((team) => {
+                    const isExpanded = expandedTeams.has(team.id);
+                    const teamMemberCount = members.filter((m) => m.teamId === team.id).length;
+
+                    return (
+                      <div key={team.id} className="team-tree" style={{ '--team-color': team.color } as React.CSSProperties}>
+                        <div className="team-header" onClick={() => toggleTeamExpanded(team.id)}>
+                          <div className="team-expand">
+                            {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                          </div>
+                          <div className="team-color-bar" style={{ background: team.color }} />
+                          <div className="team-info">
+                            <h4 className="team-name">{team.name}</h4>
+                            <span className="team-count">{teamMemberCount}名</span>
+                          </div>
+                          <div className="team-actions">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditTeam(team);
+                              }}
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTeam(team);
+                              }}
+                              className="delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="team-body">
+                            {RANKS.map((rank) => {
+                              const rankMembers = getTeamMembersByRank(team.id, rank);
+                              return (
+                                <div key={rank} className="rank-section">
+                                  <div className="rank-header" style={{ color: RankColors[rank] }}>
+                                    <div className="rank-indicator" style={{ background: RankColors[rank] }} />
+                                    {RankLabels[rank]}
+                                    <span className="rank-count">{rankMembers.length}</span>
+                                  </div>
+                                  <Droppable droppableId={`team-${team.id}-${rank}`}>
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.droppableProps}
+                                        className={`rank-dropzone ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
+                                      >
+                                        {rankMembers.length === 0 ? (
+                                          <div className="drop-hint">ここにドロップ</div>
+                                        ) : (
+                                          rankMembers.map((member, index) => (
+                                            <Draggable key={member.id} draggableId={member.id} index={index}>
+                                              {(provided, snapshot) => (
+                                                <div
+                                                  ref={provided.innerRef}
+                                                  {...provided.draggableProps}
+                                                  {...provided.dragHandleProps}
+                                                  className={`member-chip ${snapshot.isDragging ? 'dragging' : ''}`}
+                                                >
+                                                  <GripVertical size={12} className="drag-handle" />
+                                                  <div
+                                                    className="member-avatar"
+                                                    style={{ width: 24, height: 24, fontSize: 10 }}
+                                                  >
+                                                    {member.name.charAt(0)}
+                                                  </div>
+                                                  <span>{member.name}</span>
+                                                </div>
+                                              )}
+                                            </Draggable>
+                                          ))
+                                        )}
+                                        {provided.placeholder}
+                                      </div>
+                                    )}
+                                  </Droppable>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      </DragDropContext>
 
       {/* ランク別サマリー */}
-      <div className="card">
+      <div className="card" style={{ marginTop: 24 }}>
         <div className="card-header">
           <h3 className="card-title">ランク別人数</h3>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-          <div style={{ padding: 20, background: '#FDF2F8', borderRadius: 12, textAlign: 'center' }}>
-            <div style={{ fontSize: 36, fontWeight: 700, color: '#EC4899' }}>{seniorManagers.length}</div>
-            <div style={{ fontSize: 14, color: '#6B7280' }}>シニアマネージャー</div>
-          </div>
-          <div style={{ padding: 20, background: '#F5F3FF', borderRadius: 12, textAlign: 'center' }}>
-            <div style={{ fontSize: 36, fontWeight: 700, color: '#8B5CF6' }}>{managers.length}</div>
-            <div style={{ fontSize: 14, color: '#6B7280' }}>マネージャー</div>
-          </div>
-          <div style={{ padding: 20, background: '#EFF6FF', borderRadius: 12, textAlign: 'center' }}>
-            <div style={{ fontSize: 36, fontWeight: 700, color: '#3B82F6' }}>{seniorConsultants.length}</div>
-            <div style={{ fontSize: 14, color: '#6B7280' }}>シニアコンサルタント</div>
-          </div>
-          <div style={{ padding: 20, background: '#ECFDF5', borderRadius: 12, textAlign: 'center' }}>
-            <div style={{ fontSize: 36, fontWeight: 700, color: '#10B981' }}>{consultants.length}</div>
-            <div style={{ fontSize: 14, color: '#6B7280' }}>コンサルタント</div>
-          </div>
+          {RANKS.map((rank) => (
+            <div
+              key={rank}
+              style={{
+                padding: 20,
+                background: `${RankColors[rank]}10`,
+                borderRadius: 12,
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: 36, fontWeight: 700, color: RankColors[rank] }}>
+                {members.filter((m) => m.rank === rank).length}
+              </div>
+              <div style={{ fontSize: 14, color: '#6B7280' }}>{RankLabels[rank]}</div>
+            </div>
+          ))}
         </div>
       </div>
-
-      {/* チーム詳細モーダル */}
-      {selectedTeam && (
-        <div className="modal-overlay" onClick={() => setSelectedTeam(null)}>
-          <div className="modal-content" style={{ width: 600, maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 className="modal-title" style={{ margin: 0, color: selectedTeam.color }}>{selectedTeam.name}</h3>
-              <button onClick={() => setSelectedTeam(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <X size={20} color="#6B7280" />
-              </button>
-            </div>
-
-            <h4 style={{ fontSize: 14, color: '#6B7280', marginBottom: 12 }}>メンバー</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {getTeamMembers(selectedTeam.id).map((member) => (
-                <div
-                  key={member.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 16px',
-                    background: '#F9FAFB',
-                    borderRadius: 8,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div className="member-avatar" style={{ width: 36, height: 36, fontSize: 14 }}>
-                      {member.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 500 }}>{member.name}</div>
-                      <span className={`badge badge-${member.rank.toLowerCase()}`} style={{ fontSize: 10 }}>
-                        {RankLabels[member.rank]}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleAssignToTeam(member.id, null)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 12 }}
-                  >
-                    除外
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <h4 style={{ fontSize: 14, color: '#6B7280', margin: '20px 0 12px' }}>メンバーを追加</h4>
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleAssignToTeam(e.target.value, selectedTeam.id);
-                  e.target.value = '';
-                }
-              }}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #E5E7EB', borderRadius: 8 }}
-            >
-              <option value="">メンバーを選択...</option>
-              {unassignedMembers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({RankLabels[m.rank]})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
 
       {/* チーム編集モーダル */}
       {(editingTeam || isAddingTeam) && (
@@ -308,20 +297,6 @@ export function Organization() {
                 onChange={(e) => setTeamForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="チーム名を入力"
               />
-            </div>
-
-            <div className="form-group">
-              <label>リーダー</label>
-              <select value={teamForm.leaderId} onChange={(e) => setTeamForm((f) => ({ ...f, leaderId: e.target.value }))}>
-                <option value="">選択してください</option>
-                {members
-                  .filter((m) => m.rank === 'MGR' || m.rank === 'SMGR')
-                  .map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({RankLabels[m.rank]})
-                    </option>
-                  ))}
-              </select>
             </div>
 
             <div className="form-group">
