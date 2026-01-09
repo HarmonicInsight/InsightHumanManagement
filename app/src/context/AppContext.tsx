@@ -78,26 +78,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return 2024;
   });
 
-  // 初期ロード時に重複メンバーをクリーンアップ
-  useEffect(() => {
-    setAllData((prev) => {
-      let hasChanges = false;
-      const cleaned = prev.map((yearData) => {
-        const seenIds = new Set<string>();
-        const uniqueMembers = yearData.members.filter((member) => {
-          if (seenIds.has(member.id)) {
-            hasChanges = true;
-            return false;
-          }
-          seenIds.add(member.id);
-          return true;
-        });
-        return hasChanges ? { ...yearData, members: uniqueMembers } : yearData;
-      });
-      return hasChanges ? cleaned : prev;
-    });
-  }, []);
-
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
   }, [allData]);

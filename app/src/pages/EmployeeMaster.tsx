@@ -332,10 +332,22 @@ export function EmployeeMaster() {
           const department = String(row['部署'] || row['所属'] || '').trim();
 
           // チーム紐づけ（Team列からチーム名を取得してマッチング）
-          const teamName = String(row['Team'] || row['チーム'] || '').trim();
+          const teamNameRaw = String(row['Team'] || row['チーム'] || '').trim();
+          // 全角・半角を正規化して比較
+          const normalizeStr = (s: string) => s
+            .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+            .replace(/　/g, ' ')
+            .toLowerCase()
+            .trim();
+          const teamNameNorm = normalizeStr(teamNameRaw);
           let teamId: string | null = null;
-          if (teamName) {
-            const matchedTeam = teams.find(t => t.name === teamName || t.name.includes(teamName) || teamName.includes(t.name));
+          if (teamNameNorm) {
+            const matchedTeam = teams.find(t => {
+              const tNameNorm = normalizeStr(t.name);
+              return tNameNorm === teamNameNorm ||
+                     tNameNorm.includes(teamNameNorm) ||
+                     teamNameNorm.includes(tNameNorm);
+            });
             if (matchedTeam) {
               teamId = matchedTeam.id;
             }
