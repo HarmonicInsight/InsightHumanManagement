@@ -1,4 +1,4 @@
-export type Rank = 'CONS' | 'Scon' | 'MGR' | 'SMGR';
+export type Rank = 'CONS' | 'Scon' | 'MGR' | 'SMGR' | 'DIR';
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | null;
 
@@ -63,6 +63,7 @@ export const RankLabels: Record<Rank, string> = {
   Scon: 'シニアコンサルタント',
   MGR: 'マネージャー',
   SMGR: 'シニアマネージャー',
+  DIR: 'ダイレクター',
 };
 
 export const RankOrder: Record<Rank, number> = {
@@ -70,6 +71,7 @@ export const RankOrder: Record<Rank, number> = {
   Scon: 2,
   MGR: 3,
   SMGR: 4,
+  DIR: 5,
 };
 
 export const RankColors: Record<Rank, string> = {
@@ -77,6 +79,7 @@ export const RankColors: Record<Rank, string> = {
   Scon: '#3B82F6',
   MGR: '#8B5CF6',
   SMGR: '#EC4899',
+  DIR: '#F59E0B',
 };
 
 export const GradeColors: Record<string, string> = {
@@ -151,6 +154,7 @@ export const DefaultRankUnitPrices: RankUnitPrice[] = [
   { rank: 'Scon', unitPrice: 100 },
   { rank: 'MGR', unitPrice: 130 },
   { rank: 'SMGR', unitPrice: 160 },
+  { rank: 'DIR', unitPrice: 200 },
 ];
 
 export const DefaultAgentFeeRate = 35; // デフォルトエージェント費用率 35%

@@ -7,7 +7,7 @@ import { RankLabels, RankColors } from '../types';
 import type { Rank, Member, EmployeeStatus, Evaluation, Skills, Gender } from '../types';
 import './EmployeeMaster.css';
 
-const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
+const RANKS: Rank[] = ['DIR', 'SMGR', 'MGR', 'Scon', 'CONS'];
 const STATUS_OPTIONS: { value: EmployeeStatus; label: string }[] = [
   { value: 'active', label: '在籍' },
   { value: 'inactive', label: '退職' },
@@ -16,23 +16,35 @@ const STATUS_OPTIONS: { value: EmployeeStatus; label: string }[] = [
 
 // JOBRANKの変換マップ (BCON形式も対応)
 const JOBRANK_MAP: Record<string, Rank> = {
+  // ダイレクター
+  'ダイレクター': 'DIR',
+  'DIR': 'DIR',
+  'BCON08': 'DIR',
+  'BCON09': 'DIR',
+  // シニアマネージャー
   'シニアマネージャー': 'SMGR',
   'SMGR': 'SMGR',
   'BCON07': 'SMGR',
+  // マネージャー
   'マネージャー': 'MGR',
   'MGR': 'MGR',
   'BCON06': 'MGR',
+  // シニアコンサルタント
   'シニアコンサルタント': 'Scon',
   'Scon': 'Scon',
   'BCON05': 'Scon',
+  // コンサルタント
   'コンサルタント': 'CONS',
   'CONS': 'CONS',
   'BCON04': 'CONS',
   'BCON03': 'CONS',
+  'BCON02': 'CONS',
+  'BCON01': 'CONS',
 };
 
 // BCONコードへの逆変換
 const REVERSE_JOBRANK_MAP: Record<Rank, string> = {
+  'DIR': 'BCON08',
   'SMGR': 'BCON07',
   'MGR': 'BCON06',
   'Scon': 'BCON05',

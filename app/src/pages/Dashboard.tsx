@@ -30,6 +30,7 @@ export function Dashboard() {
     Scon: members.filter((m) => m.rank === 'Scon').length,
     MGR: members.filter((m) => m.rank === 'MGR').length,
     SMGR: members.filter((m) => m.rank === 'SMGR').length,
+    DIR: members.filter((m) => m.rank === 'DIR').length,
   };
 
   const gradeData = [
@@ -40,6 +41,7 @@ export function Dashboard() {
   ];
 
   const rankData = [
+    { name: 'DIR', count: rankCounts.DIR, color: '#F59E0B' },
     { name: 'SMGR', count: rankCounts.SMGR, color: '#EC4899' },
     { name: 'MGR', count: rankCounts.MGR, color: '#8B5CF6' },
     { name: 'Scon', count: rankCounts.Scon, color: '#3B82F6' },

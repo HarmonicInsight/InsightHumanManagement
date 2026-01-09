@@ -4,8 +4,9 @@ import { RankLabels, DefaultRankUnitPrices } from '../types';
 import type { Rank } from '../types';
 import './UnitPriceMaster.css';
 
-const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
+const RANKS: Rank[] = ['DIR', 'SMGR', 'MGR', 'Scon', 'CONS'];
 const RANK_SHORT_LABELS: Record<Rank, string> = {
+  'DIR': 'D',
   'SMGR': 'SM',
   'MGR': 'M',
   'Scon': 'SC',

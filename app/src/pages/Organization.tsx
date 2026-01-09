@@ -9,7 +9,7 @@ import type { Team, Rank } from '../types';
 import '../components/YearSelector.css';
 import './Organization.css';
 
-const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
+const RANKS: Rank[] = ['DIR', 'SMGR', 'MGR', 'Scon', 'CONS'];
 
 export function Organization() {
   const { members, teams, addTeam, updateTeam, deleteTeam, updateMember, currentYear } = useApp();
@@ -382,7 +382,7 @@ export function Organization() {
         <div className="card-header">
           <h3 className="card-title">ランク別人数</h3>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 20 }}>
           {RANKS.map((rank) => (
             <div
               key={rank}

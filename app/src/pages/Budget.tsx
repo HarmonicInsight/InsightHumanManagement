@@ -8,7 +8,7 @@ import './Budget.css';
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; // 1月〜12月
 const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
+const RANKS: Rank[] = ['DIR', 'SMGR', 'MGR', 'Scon', 'CONS'];
 
 export function Budget() {
   const {
