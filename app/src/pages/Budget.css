@@ -47,12 +47,12 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  min-width: 1400px;
+  min-width: 1600px;
 }
 
 .salary-table th,
 .salary-table td {
-  padding: 10px 8px;
+  padding: 8px 6px;
   border-bottom: 1px solid var(--gray-100);
   text-align: left;
   white-space: nowrap;
@@ -72,21 +72,78 @@
   left: 0;
   background: white;
   z-index: 2;
-  min-width: 140px;
+  min-width: 120px;
 }
 
 .salary-table .sticky-col-2 {
   position: sticky;
-  left: 140px;
+  left: 120px;
   background: white;
   z-index: 2;
-  min-width: 100px;
+  min-width: 110px;
+}
+
+.salary-table .sticky-col-3 {
+  position: sticky;
+  left: 230px;
+  background: white;
+  z-index: 2;
+  min-width: 70px;
 }
 
 .salary-table th.sticky-col,
-.salary-table th.sticky-col-2 {
+.salary-table th.sticky-col-2,
+.salary-table th.sticky-col-3 {
   background: var(--gray-50);
   z-index: 3;
+}
+
+/* Dual row structure */
+.salary-table.dual-row tbody tr.unit-row td {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.salary-table.dual-row tbody tr.salary-row td {
+  padding-top: 4px;
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.salary-table.dual-row tbody tr.unit-row .sticky-col,
+.salary-table.dual-row tbody tr.unit-row .sticky-col-2,
+.salary-table.dual-row tbody tr.unit-row .sticky-col-3 {
+  vertical-align: middle;
+}
+
+.row-type {
+  font-size: 11px;
+  font-weight: 600;
+  width: 70px;
+}
+
+.row-type.unit {
+  color: #3B82F6;
+  background: #EFF6FF;
+}
+
+.row-type.salary {
+  color: #10B981;
+  background: #ECFDF5;
+}
+
+.unit-cell {
+  color: var(--gray-500);
+  font-size: 12px;
+  text-align: center;
+}
+
+.unit-price-display {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-color);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .member-info-cell {
@@ -96,16 +153,16 @@
 }
 
 .salary-input {
-  width: 70px;
-  padding: 6px 8px;
+  width: 60px;
+  padding: 4px 6px;
   border: 1px solid var(--gray-200);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   text-align: right;
 }
 
 .salary-input.small {
-  width: 60px;
+  width: 55px;
 }
 
 .salary-input:focus {
@@ -122,6 +179,16 @@
   font-weight: 600;
   color: var(--gray-800);
   background: var(--gray-50);
+  text-align: right;
+  padding-right: 12px !important;
+}
+
+.total-cell.unit {
+  color: #3B82F6;
+}
+
+.total-cell.salary {
+  color: #10B981;
 }
 
 .hire-table-container {

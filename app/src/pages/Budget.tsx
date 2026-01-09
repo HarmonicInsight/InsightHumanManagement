@@ -6,8 +6,8 @@ import { RankLabels, RankColors, DefaultAgentFeeRate } from '../types';
 import type { Rank, NewHire, MemberSalary } from '../types';
 import './Budget.css';
 
-const MONTHS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]; // 日本の会計年度順
-const MONTH_LABELS = ['4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月', '1月', '2月', '3月'];
+const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; // 1月〜12月
+const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
 
 export function Budget() {
@@ -47,6 +47,11 @@ export function Budget() {
   const memberSalaries = budget.memberSalaries;
   const newHires = budget.newHires;
 
+  const getUnitPrice = (rank: Rank): number => {
+    const price = rankUnitPrices.find((p) => p.rank === rank);
+    return price?.unitPrice || 0;
+  };
+
   const handleUnitPriceChange = (rank: Rank, value: string) => {
     const newPrice = Number(value) || 0;
     const updated = rankUnitPrices.map((p) =>
@@ -65,12 +70,6 @@ export function Budget() {
     );
   };
 
-  const handleAnnualSalaryChange = (memberId: string, value: string) => {
-    const salary = getMemberSalary(memberId);
-    const annualSalary = value === '' ? null : Number(value);
-    updateMemberSalary({ ...salary, annualSalary });
-  };
-
   const handleMonthlySalaryChange = (memberId: string, month: number, value: string) => {
     const salary = getMemberSalary(memberId);
     const monthlyValue = value === '' ? null : Number(value);
@@ -80,24 +79,29 @@ export function Budget() {
     });
   };
 
-  const calculateMemberTotalSalary = (memberId: string): number => {
+  // 単価の年間合計
+  const calculateMemberUnitPriceTotal = (rank: Rank): number => {
+    return getUnitPrice(rank) * 12;
+  };
+
+  // 給与の年間合計
+  const calculateMemberSalaryTotal = (memberId: string, rank: Rank): number => {
     const salary = getMemberSalary(memberId);
+    const unitPrice = getUnitPrice(rank);
     let total = 0;
     MONTHS.forEach((month) => {
       const monthSalary = salary.monthlySalaries[month];
       if (monthSalary !== null && monthSalary !== undefined) {
         total += monthSalary;
-      } else if (salary.annualSalary) {
-        total += salary.annualSalary / 12;
+      } else {
+        total += unitPrice;
       }
     });
     return total;
   };
 
   const calculateNewHireSalary = (hire: NewHire): number => {
-    const monthsWorked = hire.entryMonth <= 3
-      ? 3 - hire.entryMonth + 1
-      : 12 - hire.entryMonth + 1 + 3;
+    const monthsWorked = 12 - hire.entryMonth + 1;
     return (hire.annualSalary / 12) * monthsWorked;
   };
 
@@ -108,8 +112,13 @@ export function Budget() {
     return (hire.annualSalary * hire.agentFeeRate) / 100;
   };
 
+  const totalMemberUnitPrice = members.reduce(
+    (sum, m) => sum + calculateMemberUnitPriceTotal(m.rank),
+    0
+  );
+
   const totalMemberSalary = members.reduce(
-    (sum, m) => sum + calculateMemberTotalSalary(m.id),
+    (sum, m) => sum + calculateMemberSalaryTotal(m.id, m.rank),
     0
   );
 
@@ -194,39 +203,39 @@ export function Budget() {
       {/* サマリーカード */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-label">既存メンバー人件費</div>
-          <div className="stat-value">{totalMemberSalary.toFixed(0)}万円</div>
+          <div className="stat-label">標準単価合計</div>
+          <div className="stat-value">{totalMemberUnitPrice.toLocaleString()}万円</div>
           <div className="stat-icon">
             <Users size={24} color="#3B82F6" />
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">新規採用人件費</div>
-          <div className="stat-value">{totalNewHireSalary.toFixed(0)}万円</div>
+          <div className="stat-label">給与実績合計</div>
+          <div className="stat-value">{totalMemberSalary.toLocaleString()}万円</div>
           <div className="stat-icon">
-            <UserPlus size={24} color="#10B981" />
+            <Users size={24} color="#10B981" />
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">エージェント費用合計</div>
-          <div className="stat-value">{totalAgentFees.toFixed(0)}万円</div>
+          <div className="stat-label">新規採用費用</div>
+          <div className="stat-value">{(totalNewHireSalary + totalAgentFees).toLocaleString()}万円</div>
           <div className="stat-icon">
-            <DollarSign size={24} color="#F59E0B" />
+            <UserPlus size={24} color="#F59E0B" />
           </div>
         </div>
         <div className="stat-card highlight">
           <div className="stat-label">トータル人件費</div>
-          <div className="stat-value">{totalLaborCost.toFixed(0)}万円</div>
+          <div className="stat-value">{totalLaborCost.toLocaleString()}万円</div>
           <div className="stat-icon">
             <DollarSign size={24} color="#8B5CF6" />
           </div>
         </div>
       </div>
 
-      {/* ランク別標準単価 */}
+      {/* 単価マスタ */}
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">ランク別標準単価</h3>
+          <h3 className="card-title">単価マスタ</h3>
         </div>
         <div className="unit-price-grid">
           {RANKS.map((rank) => {
@@ -249,69 +258,77 @@ export function Budget() {
         </div>
       </div>
 
-      {/* メンバー別給与一覧 */}
+      {/* メンバー別単価・給与一覧 */}
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">メンバー別給与一覧</h3>
+          <h3 className="card-title">メンバー別単価・給与一覧</h3>
         </div>
         <div className="salary-table-container">
-          <table className="salary-table">
+          <table className="salary-table dual-row">
             <thead>
               <tr>
-                <th className="sticky-col">メンバー</th>
-                <th className="sticky-col-2">ランク</th>
-                <th>年収</th>
+                <th className="sticky-col" rowSpan={2}>メンバー</th>
+                <th className="sticky-col-2" rowSpan={2}>ランク</th>
+                <th className="sticky-col-3" rowSpan={2}>単価</th>
+                <th rowSpan={2}>区分</th>
                 {MONTH_LABELS.map((label, i) => (
                   <th key={i}>{label}</th>
                 ))}
-                <th>合計</th>
+                <th>年間合計</th>
               </tr>
             </thead>
             <tbody>
               {members.map((member) => {
                 const salary = getMemberSalary(member.id);
-                const monthlyDefault = salary.annualSalary ? (salary.annualSalary / 12).toFixed(1) : '-';
-                const total = calculateMemberTotalSalary(member.id);
+                const unitPrice = getUnitPrice(member.rank);
+                const unitPriceTotal = calculateMemberUnitPriceTotal(member.rank);
+                const salaryTotal = calculateMemberSalaryTotal(member.id, member.rank);
                 return (
-                  <tr key={member.id}>
-                    <td className="sticky-col">
-                      <div className="member-info-cell">
-                        <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
-                          {member.name.charAt(0)}
+                  <>
+                    {/* 標準単価行 */}
+                    <tr key={`${member.id}-unit`} className="unit-row">
+                      <td className="sticky-col" rowSpan={2}>
+                        <div className="member-info-cell">
+                          <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
+                            {member.name.charAt(0)}
+                          </div>
+                          <span>{member.name}</span>
                         </div>
-                        <span>{member.name}</span>
-                      </div>
-                    </td>
-                    <td className="sticky-col-2">
-                      <span
-                        className="rank-badge"
-                        style={{ background: `${RankColors[member.rank]}20`, color: RankColors[member.rank] }}
-                      >
-                        {RankLabels[member.rank]}
-                      </span>
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        className="salary-input"
-                        value={salary.annualSalary ?? ''}
-                        onChange={(e) => handleAnnualSalaryChange(member.id, e.target.value)}
-                        placeholder="-"
-                      />
-                    </td>
-                    {MONTHS.map((month, i) => (
-                      <td key={i}>
-                        <input
-                          type="number"
-                          className="salary-input small"
-                          value={salary.monthlySalaries[month] ?? ''}
-                          onChange={(e) => handleMonthlySalaryChange(member.id, month, e.target.value)}
-                          placeholder={monthlyDefault}
-                        />
                       </td>
-                    ))}
-                    <td className="total-cell">{total.toFixed(1)}</td>
-                  </tr>
+                      <td className="sticky-col-2" rowSpan={2}>
+                        <span
+                          className="rank-badge"
+                          style={{ background: `${RankColors[member.rank]}20`, color: RankColors[member.rank] }}
+                        >
+                          {RankLabels[member.rank]}
+                        </span>
+                      </td>
+                      <td className="sticky-col-3" rowSpan={2}>
+                        <span className="unit-price-display">{unitPrice}万円</span>
+                      </td>
+                      <td className="row-type unit">標準単価</td>
+                      {MONTHS.map((month) => (
+                        <td key={month} className="unit-cell">{unitPrice}</td>
+                      ))}
+                      <td className="total-cell unit">{unitPriceTotal.toLocaleString()}</td>
+                    </tr>
+                    {/* 給与実績行 */}
+                    <tr key={`${member.id}-salary`} className="salary-row">
+                      <td className="row-type salary">給与実績</td>
+                      {MONTHS.map((month) => (
+                        <td key={month}>
+                          <input
+                            type="number"
+                            className="salary-input small"
+                            value={salary.monthlySalaries[month] ?? ''}
+                            onChange={(e) => handleMonthlySalaryChange(member.id, month, e.target.value)}
+                            placeholder={String(unitPrice)}
+                          />
+                        </td>
+                      ))}
+                      <td className="total-cell salary">{salaryTotal.toLocaleString()}</td>
+                    </tr>
+                  </>
                 );
               })}
             </tbody>
@@ -496,13 +513,7 @@ export function Budget() {
               <div className="preview-row">
                 <span>今期給与（入社後）:</span>
                 <strong>
-                  {(
-                    (hireForm.annualSalary / 12) *
-                    (hireForm.entryMonth <= 3
-                      ? 3 - hireForm.entryMonth + 1
-                      : 12 - hireForm.entryMonth + 1 + 3)
-                  ).toFixed(1)}
-                  万円
+                  {((hireForm.annualSalary / 12) * (12 - hireForm.entryMonth + 1)).toFixed(1)}万円
                 </strong>
               </div>
               <div className="preview-row">
