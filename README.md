@@ -1,1 +1,1 @@
-# InsightHumanBudget
+# InsightHumanManagement
