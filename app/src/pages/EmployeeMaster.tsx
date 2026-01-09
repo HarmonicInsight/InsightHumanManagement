@@ -353,10 +353,14 @@ export function EmployeeMaster() {
             }
           }
 
-          // 既存社員との重複チェック（社員コードまたは名前で判定）
-          const existingMember = employeeCode
-            ? members.find((m) => m.employeeCode === employeeCode)
-            : members.find((m) => m.name === name || m.nameJp === name);
+          // 既存社員との重複チェック（社員コードまたは名前のいずれかで一致）
+          const existingMember = members.find((m) =>
+            (employeeCode && m.employeeCode === employeeCode) ||
+            m.name === name ||
+            (nameJp && m.nameJp === nameJp) ||
+            (nameJp && m.name === nameJp) ||
+            (m.nameJp && m.nameJp === name)
+          );
 
           if (existingMember) {
             // 既存社員を更新
