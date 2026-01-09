@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
-import { Plus, Edit2, Trash2, DollarSign, Users, UserPlus, ChevronDown, ChevronRight, TrendingUp } from 'lucide-react';
+import { Plus, Edit2, Trash2, DollarSign, Users, UserPlus, ChevronDown, ChevronRight, TrendingUp, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors, DefaultAgentFeeRate, RankOrder } from '../types';
@@ -26,6 +26,7 @@ export function Budget() {
   const [editingHire, setEditingHire] = useState<NewHire | null>(null);
   const [isAddingHire, setIsAddingHire] = useState(false);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set(['unassigned', ...teams.map(t => t.id)]));
+  const [multiplier, setMultiplier] = useState<number>(1.4); // 倍率 (デフォルト1.4)
   const [hireForm, setHireForm] = useState({
     name: '',
     rank: 'CONS' as Rank,
@@ -76,15 +77,6 @@ export function Budget() {
     );
   };
 
-  const handleMonthlySalaryChange = (memberId: string, month: number, value: string) => {
-    const salary = getMemberSalary(memberId);
-    const monthlyValue = value === '' ? null : Number(value);
-    updateMemberSalary({
-      ...salary,
-      monthlySalaries: { ...salary.monthlySalaries, [month]: monthlyValue },
-    });
-  };
-
   // 給与列に入力した値を全月に反映
   const handleBaseSalaryChange = (memberId: string, value: string) => {
     const salary = getMemberSalary(memberId);
@@ -120,18 +112,20 @@ export function Budget() {
     return getUnitPrice(rank) * 12;
   };
 
-  // 給与の年間合計
-  const calculateMemberSalaryTotal = (memberId: string, rank: Rank): number => {
+  // 管理給与の計算 (給与 × 倍率)
+  const calculateManagedSalary = (baseSalary: number): number => {
+    return Math.round(baseSalary * multiplier * 10) / 10;
+  };
+
+  // 管理給与の年間合計
+  const calculateMemberManagedSalaryTotal = (memberId: string, rank: Rank): number => {
     const salary = getMemberSalary(memberId);
     const unitPrice = getUnitPrice(rank);
     let total = 0;
     MONTHS.forEach((month) => {
       const monthSalary = salary.monthlySalaries[month];
-      if (monthSalary !== null && monthSalary !== undefined) {
-        total += monthSalary;
-      } else {
-        total += unitPrice;
-      }
+      const baseSalary = (monthSalary !== null && monthSalary !== undefined) ? monthSalary : unitPrice;
+      total += calculateManagedSalary(baseSalary);
     });
     return total;
   };
@@ -153,8 +147,8 @@ export function Budget() {
     0
   );
 
-  const totalMemberSalary = members.reduce(
-    (sum, m) => sum + calculateMemberSalaryTotal(m.id, m.rank),
+  const totalMemberManagedSalary = members.reduce(
+    (sum, m) => sum + calculateMemberManagedSalaryTotal(m.id, m.rank),
     0
   );
 
@@ -168,7 +162,7 @@ export function Budget() {
     0
   );
 
-  const totalLaborCost = totalMemberSalary + totalNewHireSalary + totalAgentFees;
+  const totalLaborCost = totalMemberManagedSalary + totalNewHireSalary + totalAgentFees;
 
   // チーム別標準原価合計を計算
   const calculateTeamUnitPriceTotal = (teamId: string | null) => {
@@ -244,8 +238,9 @@ export function Budget() {
       const salary = getMemberSalary(member.id);
       const unitPrice = getUnitPrice(member.rank);
       const unitPriceTotal = calculateMemberUnitPriceTotal(member.rank);
-      const salaryTotal = calculateMemberSalaryTotal(member.id, member.rank);
+      const managedSalaryTotal = calculateMemberManagedSalaryTotal(member.id, member.rank);
       const baseSalary = getMemberBaseSalary(member.id);
+      const managedBaseSalary = baseSalary !== null ? calculateManagedSalary(baseSalary) : calculateManagedSalary(unitPrice);
       return (
         <Fragment key={member.id}>
           {/* 標準単価行 */}
@@ -279,27 +274,30 @@ export function Budget() {
                 style={{ width: 70 }}
               />
             </td>
+            <td className="sticky-col-5" rowSpan={2}>
+              <span className="multiplier-display">×{multiplier}</span>
+            </td>
+            <td className="sticky-col-6" rowSpan={2}>
+              <span className="managed-salary-display">{managedBaseSalary}</span>
+            </td>
             <td className="row-type unit">標準単価</td>
             {MONTHS.map((month) => (
               <td key={month} className="unit-cell">{unitPrice}</td>
             ))}
             <td className="total-cell unit">{unitPriceTotal.toLocaleString()}</td>
           </tr>
-          {/* 給与実績行 */}
+          {/* 管理給与行 */}
           <tr className="salary-row">
-            <td className="row-type salary">給与実績</td>
-            {MONTHS.map((month) => (
-              <td key={month}>
-                <input
-                  type="number"
-                  className="salary-input small"
-                  value={salary.monthlySalaries[month] ?? ''}
-                  onChange={(e) => handleMonthlySalaryChange(member.id, month, e.target.value)}
-                  placeholder={String(unitPrice)}
-                />
-              </td>
-            ))}
-            <td className="total-cell salary">{salaryTotal.toLocaleString()}</td>
+            <td className="row-type managed">管理給与</td>
+            {MONTHS.map((month) => {
+              const monthSalary = salary.monthlySalaries[month];
+              const baseSalaryForMonth = (monthSalary !== null && monthSalary !== undefined) ? monthSalary : unitPrice;
+              const managedValue = calculateManagedSalary(baseSalaryForMonth);
+              return (
+                <td key={month} className="managed-cell">{managedValue}</td>
+              );
+            })}
+            <td className="total-cell managed">{managedSalaryTotal.toLocaleString()}</td>
           </tr>
         </Fragment>
       );
@@ -313,7 +311,7 @@ export function Budget() {
 
     // チーム合計を計算
     const teamUnitPriceTotal = teamMembers.reduce((sum, m) => sum + calculateMemberUnitPriceTotal(m.rank), 0);
-    const teamSalaryTotal = teamMembers.reduce((sum, m) => sum + calculateMemberSalaryTotal(m.id, m.rank), 0);
+    const teamManagedSalaryTotal = teamMembers.reduce((sum, m) => sum + calculateMemberManagedSalaryTotal(m.id, m.rank), 0);
 
     return (
       <Fragment key={teamId}>
@@ -334,6 +332,8 @@ export function Budget() {
           <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
           <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
           <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
+          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
+          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
           <td className="row-type unit" style={{ fontSize: 11 }}>標準単価</td>
           {MONTHS.map((month) => (
             <td key={month} style={{ background: `${teamColor}10` }}></td>
@@ -342,18 +342,18 @@ export function Budget() {
             {teamUnitPriceTotal.toLocaleString()}
           </td>
         </tr>
-        {/* チームヘッダ - 給与実績行 */}
+        {/* チームヘッダ - 管理給与行 */}
         <tr
           className="team-header-row"
           style={{ background: `${teamColor}15`, cursor: 'pointer' }}
           onClick={() => toggleTeamExpanded(teamId)}
         >
-          <td className="row-type salary" style={{ fontSize: 11 }}>給与実績</td>
+          <td className="row-type managed" style={{ fontSize: 11 }}>管理給与</td>
           {MONTHS.map((month) => (
-            <td key={`salary-${month}`} style={{ background: `${teamColor}10` }}></td>
+            <td key={`managed-${month}`} style={{ background: `${teamColor}10` }}></td>
           ))}
-          <td style={{ background: '#ECFDF5', fontWeight: 600, fontSize: 12, textAlign: 'right', paddingRight: 8, color: '#10B981' }}>
-            {teamSalaryTotal.toLocaleString()}
+          <td style={{ background: '#FDF2F8', fontWeight: 600, fontSize: 12, textAlign: 'right', paddingRight: 8, color: '#DB2777' }}>
+            {teamManagedSalaryTotal.toLocaleString()}
           </td>
         </tr>
         {isExpanded && renderMemberRows(teamMembers)}
@@ -436,10 +436,10 @@ export function Budget() {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">給与実績合計</div>
-          <div className="stat-value">{totalMemberSalary.toLocaleString()}万円</div>
+          <div className="stat-label">管理給与合計 (×{multiplier})</div>
+          <div className="stat-value">{totalMemberManagedSalary.toLocaleString()}万円</div>
           <div className="stat-icon">
-            <Users size={24} color="#10B981" />
+            <Users size={24} color="#DB2777" />
           </div>
         </div>
         <div className="stat-card">
@@ -462,6 +462,19 @@ export function Budget() {
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">メンバー別単価・給与一覧</h3>
+          <div className="multiplier-control">
+            <Settings size={16} />
+            <span>倍率:</span>
+            <input
+              type="number"
+              className="multiplier-input"
+              value={multiplier}
+              onChange={(e) => setMultiplier(Number(e.target.value) || 1)}
+              step={0.1}
+              min={1}
+              max={3}
+            />
+          </div>
         </div>
         <div className="salary-table-container">
           <table className="salary-table dual-row">
@@ -471,6 +484,8 @@ export function Budget() {
                 <th className="sticky-col-2" rowSpan={2}>ランク</th>
                 <th className="sticky-col-3" rowSpan={2}>単価</th>
                 <th className="sticky-col-4" rowSpan={2}>給与</th>
+                <th className="sticky-col-5" rowSpan={2}>倍率</th>
+                <th className="sticky-col-6" rowSpan={2}>管理給与</th>
                 <th rowSpan={2}>区分</th>
                 {MONTH_LABELS.map((label, i) => (
                   <th key={i}>{label}</th>

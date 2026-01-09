@@ -194,10 +194,30 @@
   min-width: 80px;
 }
 
+.salary-table .sticky-col-5 {
+  position: sticky;
+  left: 380px;
+  background: white;
+  z-index: 2;
+  min-width: 50px;
+  text-align: center;
+}
+
+.salary-table .sticky-col-6 {
+  position: sticky;
+  left: 430px;
+  background: white;
+  z-index: 2;
+  min-width: 70px;
+  text-align: center;
+}
+
 .salary-table th.sticky-col,
 .salary-table th.sticky-col-2,
 .salary-table th.sticky-col-3,
-.salary-table th.sticky-col-4 {
+.salary-table th.sticky-col-4,
+.salary-table th.sticky-col-5,
+.salary-table th.sticky-col-6 {
   background: var(--gray-50);
   z-index: 3;
 }
@@ -216,7 +236,9 @@
 .salary-table.dual-row tbody tr.unit-row .sticky-col,
 .salary-table.dual-row tbody tr.unit-row .sticky-col-2,
 .salary-table.dual-row tbody tr.unit-row .sticky-col-3,
-.salary-table.dual-row tbody tr.unit-row .sticky-col-4 {
+.salary-table.dual-row tbody tr.unit-row .sticky-col-4,
+.salary-table.dual-row tbody tr.unit-row .sticky-col-5,
+.salary-table.dual-row tbody tr.unit-row .sticky-col-6 {
   vertical-align: middle;
 }
 
@@ -234,6 +256,11 @@
 .row-type.salary {
   color: #10B981;
   background: #ECFDF5;
+}
+
+.row-type.managed {
+  color: #DB2777;
+  background: #FDF2F8;
 }
 
 .unit-cell {
@@ -294,6 +321,66 @@
 
 .total-cell.salary {
   color: #10B981;
+}
+
+.total-cell.managed {
+  color: #DB2777;
+}
+
+/* Multiplier styles */
+.multiplier-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #FDF2F8;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #DB2777;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.multiplier-input {
+  width: 60px;
+  padding: 4px 8px;
+  border: 1px solid #F9A8D4;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: #DB2777;
+  background: white;
+}
+
+.multiplier-input:focus {
+  outline: none;
+  border-color: #DB2777;
+  box-shadow: 0 0 0 2px rgba(219, 39, 119, 0.1);
+}
+
+.multiplier-display {
+  font-size: 12px;
+  font-weight: 600;
+  color: #DB2777;
+  background: #FDF2F8;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.managed-salary-display {
+  font-size: 12px;
+  font-weight: 600;
+  color: #DB2777;
+  background: #FDF2F8;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.managed-cell {
+  color: #DB2777;
+  font-size: 12px;
+  text-align: center;
+  font-weight: 500;
 }
 
 .hire-table-container {
