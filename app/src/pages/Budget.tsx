@@ -12,6 +12,7 @@ const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
 
 export function Budget() {
   const {
+    currentYear,
     members,
     budget,
     initializeBudget,
@@ -235,7 +236,8 @@ export function Budget() {
       {/* 単価マスタ */}
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">単価マスタ</h3>
+          <h3 className="card-title">単価マスタ（{currentYear}年度）</h3>
+          <span className="card-subtitle">※年度ごとに設定できます</span>
         </div>
         <div className="unit-price-grid">
           {RANKS.map((rank) => {

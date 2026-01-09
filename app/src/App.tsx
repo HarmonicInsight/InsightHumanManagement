@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
+import { EmployeeMaster } from './pages/EmployeeMaster';
 import { Evaluation } from './pages/Evaluation';
 import { YearlyEvaluation } from './pages/YearlyEvaluation';
 import { SkillMap } from './pages/SkillMap';
@@ -17,6 +18,7 @@ function App() {
           <Sidebar />
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/employees" element={<EmployeeMaster />} />
             <Route path="/evaluation" element={<Evaluation />} />
             <Route path="/yearly-evaluation" element={<YearlyEvaluation />} />
             <Route path="/skillmap" element={<SkillMap />} />

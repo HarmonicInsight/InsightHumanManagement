@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Users, BarChart3, Network, Home, Settings, Wallet, Award } from 'lucide-react';
+import { BarChart3, Network, Home, Settings, Wallet, Award, UserCog, Radar } from 'lucide-react';
 import './Sidebar.css';
 
 export function Sidebar() {
@@ -18,6 +18,20 @@ export function Sidebar() {
           <span>Dashboard</span>
         </NavLink>
 
+        <div className="nav-section">マスタ管理</div>
+
+        <NavLink to="/employees" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <UserCog size={20} />
+          <span>社員マスタ</span>
+        </NavLink>
+
+        <NavLink to="/organization" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Network size={20} />
+          <span>組織・チーム</span>
+        </NavLink>
+
+        <div className="nav-section">評価・スキル</div>
+
         <NavLink to="/evaluation" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <BarChart3 size={20} />
           <span>能力評価</span>
@@ -29,18 +43,15 @@ export function Sidebar() {
         </NavLink>
 
         <NavLink to="/skillmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Users size={20} />
-          <span>Skill Map</span>
+          <Radar size={20} />
+          <span>スキルマップ</span>
         </NavLink>
 
-        <NavLink to="/organization" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Network size={20} />
-          <span>Organization</span>
-        </NavLink>
+        <div className="nav-section">予算管理</div>
 
         <NavLink to="/budget" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <Wallet size={20} />
-          <span>Budget</span>
+          <span>予算・単価</span>
         </NavLink>
       </nav>
 

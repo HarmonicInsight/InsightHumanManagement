@@ -82,6 +82,16 @@
   border-radius: 0 3px 3px 0;
 }
 
+.nav-section {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 16px 8px;
+  margin-top: 8px;
+}
+
 .sidebar-footer {
   padding: 20px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
