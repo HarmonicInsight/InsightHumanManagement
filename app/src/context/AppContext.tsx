@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import type { Member, Team, YearData, BudgetData, MemberSalary, NewHire, RankUnitPrice, MemberYearlyEvaluation, YearlyGrade } from '../types';
+import type { Member, Team, YearData, BudgetData, MemberSalary, NewHire, RankUnitPrice, MemberYearlyEvaluation, YearlyGrade, RaisePattern } from '../types';
 import { DefaultRankUnitPrices } from '../types';
 import { initialYearData } from '../data/initialData';
 
@@ -32,6 +32,9 @@ interface AppContextType {
   updateRankUnitPricesByYear: (year: number, prices: RankUnitPrice[]) => void;
   // 年度評価
   updateYearlyEvaluation: (memberId: string, year: number, grade: YearlyGrade) => void;
+  // シミュレーションパターン
+  updateSimulationPatterns: (patterns: RaisePattern[]) => void;
+  getSimulationPatterns: () => RaisePattern[];
   // データクリーンアップ
   cleanupDuplicateMembers: () => number;
 }
@@ -408,6 +411,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  // シミュレーションパターンを更新
+  const updateSimulationPatterns = useCallback(
+    (patterns: RaisePattern[]) => {
+      updateYearData((data) => ({
+        ...data,
+        budget: data.budget
+          ? { ...data.budget, simulationPatterns: patterns }
+          : {
+              year: currentYear,
+              rankUnitPrices: [...DefaultRankUnitPrices],
+              memberSalaries: [],
+              newHires: [],
+              simulationPatterns: patterns,
+            },
+      }));
+    },
+    [updateYearData, currentYear]
+  );
+
+  // シミュレーションパターンを取得
+  const getSimulationPatterns = useCallback((): RaisePattern[] => {
+    return budget?.simulationPatterns || [];
+  }, [budget]);
+
   return (
     <AppContext.Provider
       value={{
@@ -436,6 +463,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getBudgetByYear,
         updateRankUnitPricesByYear,
         updateYearlyEvaluation,
+        updateSimulationPatterns,
+        getSimulationPatterns,
         cleanupDuplicateMembers,
       }}
     >

@@ -91,6 +91,26 @@ export function Budget() {
     });
   };
 
+  // 年収列に入力した値を12で割って給与に反映
+  const handleAnnualSalaryChange = (memberId: string, value: string) => {
+    if (value === '') {
+      handleBaseSalaryChange(memberId, '');
+      return;
+    }
+    const annualSalary = Number(value);
+    const monthlySalary = Math.round(annualSalary / 12 * 10) / 10; // 小数点1位まで
+    handleBaseSalaryChange(memberId, String(monthlySalary));
+  };
+
+  // メンバーの年収を取得（給与×12）
+  const getMemberAnnualSalary = (memberId: string): number | null => {
+    const baseSalary = getMemberBaseSalary(memberId);
+    if (baseSalary !== null) {
+      return Math.round(baseSalary * 12 * 10) / 10;
+    }
+    return null;
+  };
+
   // メンバーの給与（全月同一なら表示、異なればnull）
   const getMemberBaseSalary = (memberId: string): number | null => {
     const salary = getMemberSalary(memberId);
@@ -264,6 +284,7 @@ export function Budget() {
       const unitPriceTotal = calculateMemberUnitPriceTotal(member.rank);
       const managedSalaryTotal = calculateMemberManagedSalaryTotal(member.id, member.rank);
       const baseSalary = getMemberBaseSalary(member.id);
+      const annualSalary = getMemberAnnualSalary(member.id);
       const memberMult = getMemberMultiplier(member.id);
       const managedBaseSalary = baseSalary !== null ? calculateManagedSalary(baseSalary, member.id) : calculateManagedSalary(unitPrice, member.id);
       return (
@@ -292,6 +313,16 @@ export function Budget() {
             <td className="sticky-col-4" rowSpan={2}>
               <input
                 type="number"
+                className="salary-input annual-salary-input"
+                value={annualSalary ?? ''}
+                onChange={(e) => handleAnnualSalaryChange(member.id, e.target.value)}
+                placeholder={String(unitPrice * 12)}
+                style={{ width: 80 }}
+              />
+            </td>
+            <td className="sticky-col-5" rowSpan={2}>
+              <input
+                type="number"
                 className="salary-input"
                 value={baseSalary ?? ''}
                 onChange={(e) => handleBaseSalaryChange(member.id, e.target.value)}
@@ -299,7 +330,7 @@ export function Budget() {
                 style={{ width: 70 }}
               />
             </td>
-            <td className="sticky-col-5" rowSpan={2}>
+            <td className="sticky-col-6" rowSpan={2}>
               <input
                 type="number"
                 className="multiplier-input-small"
@@ -310,7 +341,7 @@ export function Budget() {
                 max={3}
               />
             </td>
-            <td className="sticky-col-6" rowSpan={2}>
+            <td className="sticky-col-7" rowSpan={2}>
               <span className="managed-salary-display">{managedBaseSalary}</span>
             </td>
             <td className="row-type unit">標準単価</td>
@@ -362,6 +393,7 @@ export function Budget() {
               <span style={{ color: '#6B7280', fontSize: 13 }}>({teamMembers.length}名)</span>
             </div>
           </td>
+          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
           <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
           <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
           <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
@@ -476,9 +508,10 @@ export function Budget() {
                 <th className="sticky-col" rowSpan={2}>メンバー</th>
                 <th className="sticky-col-2" rowSpan={2}>ランク</th>
                 <th className="sticky-col-3" rowSpan={2}>単価</th>
-                <th className="sticky-col-4" rowSpan={2}>給与</th>
-                <th className="sticky-col-5" rowSpan={2}>倍率</th>
-                <th className="sticky-col-6" rowSpan={2}>管理給与</th>
+                <th className="sticky-col-4" rowSpan={2}>年収</th>
+                <th className="sticky-col-5" rowSpan={2}>給与</th>
+                <th className="sticky-col-6" rowSpan={2}>倍率</th>
+                <th className="sticky-col-7" rowSpan={2}>管理給与</th>
                 <th rowSpan={2}>区分</th>
                 {MONTH_LABELS.map((label, i) => (
                   <th key={i}>{label}</th>

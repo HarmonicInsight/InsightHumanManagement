@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Plus, Trash2, Calculator, Download, ChevronDown, ChevronRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors, RankOrder, YearlyGradeColors } from '../types';
-import type { Rank, Member, YearlyGrade } from '../types';
+import type { Rank, Member, YearlyGrade, RaisePattern } from '../types';
 import './BudgetSimulation.css';
 
 // 評価別デフォルト昇給率
@@ -15,12 +15,14 @@ const DEFAULT_RAISE_RATES: Record<string, number> = {
   C: 0,
 };
 
-interface RaisePattern {
-  id: string;
-  name: string;
-  rates: Record<string, number>; // S, A, B, C の昇給率
-  comment: string; // コメント
-}
+// デフォルトパターン（保存データがない場合に使用）
+const DEFAULT_PATTERNS: RaisePattern[] = [
+  { id: '1', name: 'パターン1', rates: { S: 10, A: 6, B: 4, C: 0 }, comment: '' },
+  { id: '2', name: 'パターン2', rates: { S: 10, A: 5, B: 3, C: 0 }, comment: '' },
+  { id: '3', name: 'パターン3', rates: { S: 8, A: 4, B: 2, C: 0 }, comment: '' },
+  { id: '4', name: 'パターン4', rates: { S: 6, A: 3, B: 2, C: 0 }, comment: '' },
+  { id: '5', name: 'パターン5', rates: { S: 5, A: 3, B: 1, C: 0 }, comment: '' },
+];
 
 interface MemberSimulation {
   member: Member;
@@ -31,7 +33,7 @@ interface MemberSimulation {
 }
 
 export function BudgetSimulation() {
-  const { members, teams, budget, currentYear, yearlyEvaluations, getBudgetByYear } = useApp();
+  const { members, teams, budget, currentYear, yearlyEvaluations, getBudgetByYear, getSimulationPatterns, updateSimulationPatterns } = useApp();
 
   // シミュレーション用の給与データ（ローカル）
   const [simulationSalaries, setSimulationSalaries] = useState<Record<string, number>>({});
@@ -42,14 +44,19 @@ export function BudgetSimulation() {
   // メンバー別詳細の展開状態（パターンIDをキーに）
   const [expandedPatterns, setExpandedPatterns] = useState<Record<string, boolean>>({});
 
-  // 昇給率パターン（5つ）
-  const [patterns, setPatterns] = useState<RaisePattern[]>([
-    { id: '1', name: 'パターン1', rates: { S: 10, A: 6, B: 4, C: 0 }, comment: '' },
-    { id: '2', name: 'パターン2', rates: { S: 10, A: 5, B: 3, C: 0 }, comment: '' },
-    { id: '3', name: 'パターン3', rates: { S: 8, A: 4, B: 2, C: 0 }, comment: '' },
-    { id: '4', name: 'パターン4', rates: { S: 6, A: 3, B: 2, C: 0 }, comment: '' },
-    { id: '5', name: 'パターン5', rates: { S: 5, A: 3, B: 1, C: 0 }, comment: '' },
-  ]);
+  // 昇給率パターン - 保存データから読み込み
+  const savedPatterns = getSimulationPatterns();
+  const [patterns, setPatterns] = useState<RaisePattern[]>(
+    savedPatterns.length > 0 ? savedPatterns : DEFAULT_PATTERNS
+  );
+
+  // パターンが変更されたら自動保存
+  useEffect(() => {
+    // 初回読み込み時との比較を避けるため、空チェック
+    if (patterns.length > 0) {
+      updateSimulationPatterns(patterns);
+    }
+  }, [patterns, updateSimulationPatterns]);
 
   // 翌年度の予算データを取得
   const nextYearBudget = useMemo(() => {
