@@ -1,18 +1,31 @@
 import { useState } from 'react';
-import { Search, Edit2 } from 'lucide-react';
+import { Search, Edit2, ChevronDown, ChevronRight } from 'lucide-react';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Tooltip } from 'recharts';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { MemberEditModal } from '../components/MemberEditModal';
 import { RankLabels, SkillLabels, RankOrder } from '../types';
-import type { Rank, Skills, Member } from '../types';
+import type { Rank, Skills, Member, Team } from '../types';
 
 export function SkillMap() {
-  const { members } = useApp();
+  const { members, teams } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [rankFilter, setRankFilter] = useState<Rank | 'all'>('all');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set(['unassigned', ...teams.map(t => t.id)]));
+
+  const toggleTeamExpanded = (teamId: string) => {
+    setExpandedTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  };
 
   const filteredMembers = members
     .filter((m) => {
@@ -21,6 +34,10 @@ export function SkillMap() {
       return matchesSearch && matchesRank;
     })
     .sort((a, b) => RankOrder[b.rank] - RankOrder[a.rank]);
+
+  const getMembersByTeam = (teamId: string | null) => {
+    return filteredMembers.filter((m) => m.teamId === teamId);
+  };
 
   const getSkillBarClass = (value: number | null) => {
     if (value === null) return '';
@@ -50,6 +67,74 @@ export function SkillMap() {
     'responsibility',
     'independence',
   ];
+
+  const renderMemberRows = (teamMembers: Member[]) => {
+    return teamMembers.map((member) => (
+      <tr key={member.id}>
+        <td>
+          <div
+            className="member-info"
+            style={{ cursor: 'pointer', paddingLeft: 16 }}
+            onClick={() => setSelectedMember(member)}
+          >
+            <div className="member-avatar">{member.name.charAt(0)}</div>
+            <div>
+              <div className="member-name">{member.name}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span className={`badge badge-${member.rank.toLowerCase()}`}>{RankLabels[member.rank]}</span>
+        </td>
+        {skillKeys.map((key) => (
+          <td key={key}>
+            <div className="skill-bar">
+              <div className="skill-bar-track">
+                <div className={`skill-bar-fill ${getSkillBarClass(member.skills[key])}`}></div>
+              </div>
+              <span className="skill-value">{member.skills[key] !== null ? member.skills[key] : '-'}</span>
+            </div>
+          </td>
+        ))}
+        <td>
+          <button
+            onClick={() => setEditingMember(member)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 8 }}
+          >
+            <Edit2 size={16} />
+          </button>
+        </td>
+      </tr>
+    ));
+  };
+
+  const renderTeamSection = (team: Team | null, teamId: string, teamName: string, teamColor: string) => {
+    const teamMembers = getMembersByTeam(team?.id || null);
+    if (teamMembers.length === 0) return null;
+    const isExpanded = expandedTeams.has(teamId);
+
+    return (
+      <>
+        <tr
+          className="team-header-row"
+          style={{ background: `${teamColor}15`, cursor: 'pointer' }}
+          onClick={() => toggleTeamExpanded(teamId)}
+        >
+          <td colSpan={skillKeys.length + 3} style={{ padding: '8px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              <div style={{ width: 4, height: 16, background: teamColor, borderRadius: 2 }} />
+              <span style={{ fontWeight: 600, color: '#374151' }}>{teamName}</span>
+              <span style={{ color: '#6B7280', fontSize: 13 }}>({teamMembers.length}名)</span>
+            </div>
+          </td>
+        </tr>
+        {isExpanded && renderMemberRows(teamMembers)}
+      </>
+    );
+  };
+
+  const unassignedMembers = getMembersByTeam(null);
 
   return (
     <div className="main-content">
@@ -126,43 +211,8 @@ export function SkillMap() {
               </tr>
             </thead>
             <tbody>
-              {filteredMembers.map((member) => (
-                <tr key={member.id}>
-                  <td>
-                    <div
-                      className="member-info"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setSelectedMember(member)}
-                    >
-                      <div className="member-avatar">{member.name.charAt(0)}</div>
-                      <div>
-                        <div className="member-name">{member.name}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`badge badge-${member.rank.toLowerCase()}`}>{RankLabels[member.rank]}</span>
-                  </td>
-                  {skillKeys.map((key) => (
-                    <td key={key}>
-                      <div className="skill-bar">
-                        <div className="skill-bar-track">
-                          <div className={`skill-bar-fill ${getSkillBarClass(member.skills[key])}`}></div>
-                        </div>
-                        <span className="skill-value">{member.skills[key] !== null ? member.skills[key] : '-'}</span>
-                      </div>
-                    </td>
-                  ))}
-                  <td>
-                    <button
-                      onClick={() => setEditingMember(member)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 8 }}
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {teams.map((team) => renderTeamSection(team, team.id, team.name, team.color))}
+              {unassignedMembers.length > 0 && renderTeamSection(null, 'unassigned', '未所属', '#9CA3AF')}
             </tbody>
           </table>
         </div>
