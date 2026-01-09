@@ -25,7 +25,7 @@ export function Budget() {
   const [editingHire, setEditingHire] = useState<NewHire | null>(null);
   const [isAddingHire, setIsAddingHire] = useState(false);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set(['unassigned', ...teams.map(t => t.id)]));
-  const [globalMultiplier, setGlobalMultiplier] = useState<number>(1.4); // 一括倍率
+  const [globalMultiplier, setGlobalMultiplier] = useState<number>(1.3); // 一括倍率
   const [memberMultipliers, setMemberMultipliers] = useState<Record<string, number>>({}); // 個別倍率
   const [hireForm, setHireForm] = useState({
     name: '',
