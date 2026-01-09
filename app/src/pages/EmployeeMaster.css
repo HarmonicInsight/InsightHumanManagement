@@ -1,0 +1,120 @@
+.stat-card.clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.stat-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.clickable.selected {
+  border-color: var(--primary-color);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--gray-700);
+  background: white;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background: #ECFDF5;
+  color: #059669;
+}
+
+.status-badge.inactive {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.status-badge.planned {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.status-icon {
+  flex-shrink: 0;
+}
+
+.status-icon.active {
+  color: #10B981;
+}
+
+.status-icon.inactive {
+  color: #6B7280;
+}
+
+.status-icon.planned {
+  color: #3B82F6;
+}
+
+.inactive-row {
+  opacity: 0.6;
+}
+
+.inactive-row td {
+  background: #F9FAFB;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.action-buttons button {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--gray-500);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.action-buttons button:hover {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.action-buttons button.delete:hover {
+  background: #FEE2E2;
+  color: #EF4444;
+}
+
+.empty-row {
+  text-align: center;
+  padding: 40px !important;
+  color: var(--gray-400);
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-name {
+  font-weight: 500;
+}

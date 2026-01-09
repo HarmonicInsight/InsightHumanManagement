@@ -2,6 +2,8 @@ export type Rank = 'CONS' | 'Scon' | 'MGR' | 'SMGR';
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | null;
 
+export type EmployeeStatus = 'active' | 'inactive' | 'planned';
+
 export interface Member {
   id: string;
   name: string;
@@ -9,6 +11,12 @@ export interface Member {
   teamId: string | null;
   evaluation: Evaluation;
   skills: Skills;
+  // 社員マスタ追加フィールド
+  joinDate?: string; // 入社日 YYYY-MM-DD
+  leaveDate?: string; // 退社日 YYYY-MM-DD (optional)
+  status?: EmployeeStatus; // 在籍状況
+  email?: string;
+  department?: string;
 }
 
 export interface Evaluation {
