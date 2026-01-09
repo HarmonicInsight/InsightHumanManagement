@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Network, Home, Settings, Wallet, Award, UserCog, Radar, Calculator } from 'lucide-react';
+import { Network, Settings, Wallet, Award, UserCog, Radar, Calculator } from 'lucide-react';
 import './Sidebar.css';
 
 export function Sidebar() {
@@ -7,20 +7,15 @@ export function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="logo">
-          <div className="logo-icon">I</div>
-          <span className="logo-text">Insight HRM</span>
+          <div className="logo-icon">M</div>
+          <span className="logo-text">メンバ管理・予算管理</span>
         </div>
       </div>
 
       <nav className="sidebar-nav">
-        <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end>
-          <Home size={20} />
-          <span>Dashboard</span>
-        </NavLink>
-
         <div className="nav-section">マスタ管理</div>
 
-        <NavLink to="/employees" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+        <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end>
           <UserCog size={20} />
           <span>社員マスタ</span>
         </NavLink>
@@ -35,6 +30,11 @@ export function Sidebar() {
           <span>単価マスタ</span>
         </NavLink>
 
+        <NavLink to="/budget" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Wallet size={20} />
+          <span>予算管理</span>
+        </NavLink>
+
         <div className="nav-section">評価・スキル</div>
 
         <NavLink to="/skillmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -45,13 +45,6 @@ export function Sidebar() {
         <NavLink to="/yearly-evaluation" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <Award size={20} />
           <span>年度評価</span>
-        </NavLink>
-
-        <div className="nav-section">予算管理</div>
-
-        <NavLink to="/budget" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Wallet size={20} />
-          <span>予算管理</span>
         </NavLink>
       </nav>
 

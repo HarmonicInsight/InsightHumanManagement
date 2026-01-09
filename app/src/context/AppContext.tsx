@@ -27,6 +27,8 @@ interface AppContextType {
   updateNewHire: (hire: NewHire) => void;
   deleteNewHire: (id: string) => void;
   initializeBudget: () => void;
+  getBudgetByYear: (year: number) => BudgetData | null;
+  updateRankUnitPricesByYear: (year: number, prices: RankUnitPrice[]) => void;
   // 年度評価
   updateYearlyEvaluation: (memberId: string, year: number, grade: YearlyGrade) => void;
 }
@@ -327,6 +329,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const getBudgetByYear = useCallback(
+    (year: number): BudgetData | null => {
+      const yearData = allData.find((d) => d.year === year);
+      return yearData?.budget || null;
+    },
+    [allData]
+  );
+
+  const updateRankUnitPricesByYear = useCallback(
+    (year: number, prices: RankUnitPrice[]) => {
+      setAllData((prev) =>
+        prev.map((d) => {
+          if (d.year !== year) return d;
+          return {
+            ...d,
+            budget: d.budget
+              ? { ...d.budget, rankUnitPrices: prices }
+              : {
+                  year,
+                  rankUnitPrices: prices,
+                  memberSalaries: [],
+                  newHires: [],
+                },
+          };
+        })
+      );
+    },
+    []
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -351,6 +383,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateNewHire,
         deleteNewHire,
         initializeBudget,
+        getBudgetByYear,
+        updateRankUnitPricesByYear,
         updateYearlyEvaluation,
       }}
     >
