@@ -94,6 +94,30 @@ export function Budget() {
     });
   };
 
+  // 給与列に入力した値を全月に反映
+  const handleBaseSalaryChange = (memberId: string, value: string) => {
+    const salary = getMemberSalary(memberId);
+    const baseSalary = value === '' ? null : Number(value);
+    const newMonthlySalaries: Record<number, number | null> = {};
+    MONTHS.forEach((month) => {
+      newMonthlySalaries[month] = baseSalary;
+    });
+    updateMemberSalary({
+      ...salary,
+      monthlySalaries: newMonthlySalaries,
+    });
+  };
+
+  // メンバーの給与（全月同一なら表示、異なればnull）
+  const getMemberBaseSalary = (memberId: string): number | null => {
+    const salary = getMemberSalary(memberId);
+    const values = MONTHS.map((m) => salary.monthlySalaries[m]);
+    const firstValue = values[0];
+    if (firstValue === null || firstValue === undefined) return null;
+    const allSame = values.every((v) => v === firstValue);
+    return allSame ? firstValue : null;
+  };
+
   const getMembersByTeam = (teamId: string | null) => {
     return members
       .filter((m) => m.teamId === teamId)
@@ -217,6 +241,7 @@ export function Budget() {
       const unitPrice = getUnitPrice(member.rank);
       const unitPriceTotal = calculateMemberUnitPriceTotal(member.rank);
       const salaryTotal = calculateMemberSalaryTotal(member.id, member.rank);
+      const baseSalary = getMemberBaseSalary(member.id);
       return (
         <Fragment key={member.id}>
           {/* 標準単価行 */}
@@ -239,6 +264,16 @@ export function Budget() {
             </td>
             <td className="sticky-col-3" rowSpan={2}>
               <span className="unit-price-display">{unitPrice}万円</span>
+            </td>
+            <td className="sticky-col-4" rowSpan={2}>
+              <input
+                type="number"
+                className="salary-input"
+                value={baseSalary ?? ''}
+                onChange={(e) => handleBaseSalaryChange(member.id, e.target.value)}
+                placeholder={String(unitPrice)}
+                style={{ width: 70 }}
+              />
             </td>
             <td className="row-type unit">標準単価</td>
             {MONTHS.map((month) => (
@@ -273,7 +308,6 @@ export function Budget() {
     const isExpanded = expandedTeams.has(teamId);
 
     // チーム合計を計算
-    const teamUnitTotal = teamMembers.reduce((sum, m) => sum + calculateMemberUnitPriceTotal(m.rank), 0);
     const teamSalaryTotal = teamMembers.reduce((sum, m) => sum + calculateMemberSalaryTotal(m.id, m.rank), 0);
 
     return (
@@ -283,7 +317,7 @@ export function Budget() {
           style={{ background: `${teamColor}15`, cursor: 'pointer' }}
           onClick={() => toggleTeamExpanded(teamId)}
         >
-          <td colSpan={4} style={{ padding: '8px 12px' }}>
+          <td colSpan={5} style={{ padding: '8px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               <div style={{ width: 4, height: 16, background: teamColor, borderRadius: 2 }} />
@@ -386,6 +420,7 @@ export function Budget() {
                 <th className="sticky-col" rowSpan={2}>メンバー</th>
                 <th className="sticky-col-2" rowSpan={2}>ランク</th>
                 <th className="sticky-col-3" rowSpan={2}>単価</th>
+                <th className="sticky-col-4" rowSpan={2}>給与</th>
                 <th rowSpan={2}>区分</th>
                 {MONTH_LABELS.map((label, i) => (
                   <th key={i}>{label}</th>
