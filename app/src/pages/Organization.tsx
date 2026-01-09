@@ -52,7 +52,10 @@ export function Organization() {
       const withoutPrefix = destination.droppableId.slice(5); // Remove "team-"
       const lastHyphenIndex = withoutPrefix.lastIndexOf('-');
       const teamId = withoutPrefix.slice(0, lastHyphenIndex);
-      updateMember({ ...member, teamId });
+      const targetRank = withoutPrefix.slice(lastHyphenIndex + 1) as Rank;
+
+      // Update both teamId and rank
+      updateMember({ ...member, teamId, rank: targetRank });
     }
   };
 

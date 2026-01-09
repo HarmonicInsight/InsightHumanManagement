@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, DollarSign, Users, UserPlus } from 'lucide-react';
+import { useState, useEffect, Fragment } from 'react';
+import { Plus, Edit2, Trash2, DollarSign, Users, UserPlus, ChevronDown, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
-import { RankLabels, RankColors, DefaultAgentFeeRate } from '../types';
-import type { Rank, NewHire, MemberSalary } from '../types';
+import { RankLabels, RankColors, DefaultAgentFeeRate, RankOrder } from '../types';
+import type { Rank, NewHire, MemberSalary, Team, Member } from '../types';
 import './Budget.css';
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; // 1月〜12月
@@ -14,6 +14,7 @@ export function Budget() {
   const {
     currentYear,
     members,
+    teams,
     budget,
     initializeBudget,
     updateRankUnitPrices,
@@ -25,6 +26,7 @@ export function Budget() {
 
   const [editingHire, setEditingHire] = useState<NewHire | null>(null);
   const [isAddingHire, setIsAddingHire] = useState(false);
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set(['unassigned', ...teams.map(t => t.id)]));
   const [hireForm, setHireForm] = useState({
     name: '',
     rank: 'CONS' as Rank,
@@ -39,6 +41,18 @@ export function Budget() {
       initializeBudget();
     }
   }, [budget, initializeBudget]);
+
+  const toggleTeamExpanded = (teamId: string) => {
+    setExpandedTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  };
 
   if (!budget) {
     return <div className="main-content">読み込み中...</div>;
@@ -78,6 +92,12 @@ export function Budget() {
       ...salary,
       monthlySalaries: { ...salary.monthlySalaries, [month]: monthlyValue },
     });
+  };
+
+  const getMembersByTeam = (teamId: string | null) => {
+    return members
+      .filter((m) => m.teamId === teamId)
+      .sort((a, b) => RankOrder[b.rank] - RankOrder[a.rank]);
   };
 
   // 単価の年間合計
@@ -191,6 +211,100 @@ export function Budget() {
     }
   };
 
+  const renderMemberRows = (teamMembers: Member[]) => {
+    return teamMembers.map((member) => {
+      const salary = getMemberSalary(member.id);
+      const unitPrice = getUnitPrice(member.rank);
+      const unitPriceTotal = calculateMemberUnitPriceTotal(member.rank);
+      const salaryTotal = calculateMemberSalaryTotal(member.id, member.rank);
+      return (
+        <Fragment key={member.id}>
+          {/* 標準単価行 */}
+          <tr className="unit-row">
+            <td className="sticky-col" rowSpan={2}>
+              <div className="member-info-cell" style={{ paddingLeft: 16 }}>
+                <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
+                  {member.name.charAt(0)}
+                </div>
+                <span>{member.name}</span>
+              </div>
+            </td>
+            <td className="sticky-col-2" rowSpan={2}>
+              <span
+                className="rank-badge"
+                style={{ background: `${RankColors[member.rank]}20`, color: RankColors[member.rank] }}
+              >
+                {RankLabels[member.rank]}
+              </span>
+            </td>
+            <td className="sticky-col-3" rowSpan={2}>
+              <span className="unit-price-display">{unitPrice}万円</span>
+            </td>
+            <td className="row-type unit">標準単価</td>
+            {MONTHS.map((month) => (
+              <td key={month} className="unit-cell">{unitPrice}</td>
+            ))}
+            <td className="total-cell unit">{unitPriceTotal.toLocaleString()}</td>
+          </tr>
+          {/* 給与実績行 */}
+          <tr className="salary-row">
+            <td className="row-type salary">給与実績</td>
+            {MONTHS.map((month) => (
+              <td key={month}>
+                <input
+                  type="number"
+                  className="salary-input small"
+                  value={salary.monthlySalaries[month] ?? ''}
+                  onChange={(e) => handleMonthlySalaryChange(member.id, month, e.target.value)}
+                  placeholder={String(unitPrice)}
+                />
+              </td>
+            ))}
+            <td className="total-cell salary">{salaryTotal.toLocaleString()}</td>
+          </tr>
+        </Fragment>
+      );
+    });
+  };
+
+  const renderTeamSection = (team: Team | null, teamId: string, teamName: string, teamColor: string) => {
+    const teamMembers = getMembersByTeam(team?.id || null);
+    if (teamMembers.length === 0) return null;
+    const isExpanded = expandedTeams.has(teamId);
+
+    // チーム合計を計算
+    const teamUnitTotal = teamMembers.reduce((sum, m) => sum + calculateMemberUnitPriceTotal(m.rank), 0);
+    const teamSalaryTotal = teamMembers.reduce((sum, m) => sum + calculateMemberSalaryTotal(m.id, m.rank), 0);
+
+    return (
+      <Fragment key={teamId}>
+        <tr
+          className="team-header-row"
+          style={{ background: `${teamColor}15`, cursor: 'pointer' }}
+          onClick={() => toggleTeamExpanded(teamId)}
+        >
+          <td colSpan={4} style={{ padding: '8px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              <div style={{ width: 4, height: 16, background: teamColor, borderRadius: 2 }} />
+              <span style={{ fontWeight: 600, color: '#374151' }}>{teamName}</span>
+              <span style={{ color: '#6B7280', fontSize: 13 }}>({teamMembers.length}名)</span>
+            </div>
+          </td>
+          {MONTHS.map((month) => (
+            <td key={month} style={{ background: `${teamColor}10` }}></td>
+          ))}
+          <td style={{ background: `${teamColor}20`, fontWeight: 600, fontSize: 12, textAlign: 'right', paddingRight: 8 }}>
+            {teamSalaryTotal.toLocaleString()}
+          </td>
+        </tr>
+        {isExpanded && renderMemberRows(teamMembers)}
+      </Fragment>
+    );
+  };
+
+  const unassignedMembers = getMembersByTeam(null);
+
   return (
     <div className="main-content">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -280,59 +394,8 @@ export function Budget() {
               </tr>
             </thead>
             <tbody>
-              {members.map((member) => {
-                const salary = getMemberSalary(member.id);
-                const unitPrice = getUnitPrice(member.rank);
-                const unitPriceTotal = calculateMemberUnitPriceTotal(member.rank);
-                const salaryTotal = calculateMemberSalaryTotal(member.id, member.rank);
-                return (
-                  <>
-                    {/* 標準単価行 */}
-                    <tr key={`${member.id}-unit`} className="unit-row">
-                      <td className="sticky-col" rowSpan={2}>
-                        <div className="member-info-cell">
-                          <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
-                            {member.name.charAt(0)}
-                          </div>
-                          <span>{member.name}</span>
-                        </div>
-                      </td>
-                      <td className="sticky-col-2" rowSpan={2}>
-                        <span
-                          className="rank-badge"
-                          style={{ background: `${RankColors[member.rank]}20`, color: RankColors[member.rank] }}
-                        >
-                          {RankLabels[member.rank]}
-                        </span>
-                      </td>
-                      <td className="sticky-col-3" rowSpan={2}>
-                        <span className="unit-price-display">{unitPrice}万円</span>
-                      </td>
-                      <td className="row-type unit">標準単価</td>
-                      {MONTHS.map((month) => (
-                        <td key={month} className="unit-cell">{unitPrice}</td>
-                      ))}
-                      <td className="total-cell unit">{unitPriceTotal.toLocaleString()}</td>
-                    </tr>
-                    {/* 給与実績行 */}
-                    <tr key={`${member.id}-salary`} className="salary-row">
-                      <td className="row-type salary">給与実績</td>
-                      {MONTHS.map((month) => (
-                        <td key={month}>
-                          <input
-                            type="number"
-                            className="salary-input small"
-                            value={salary.monthlySalaries[month] ?? ''}
-                            onChange={(e) => handleMonthlySalaryChange(member.id, month, e.target.value)}
-                            placeholder={String(unitPrice)}
-                          />
-                        </td>
-                      ))}
-                      <td className="total-cell salary">{salaryTotal.toLocaleString()}</td>
-                    </tr>
-                  </>
-                );
-              })}
+              {teams.map((team) => renderTeamSection(team, team.id, team.name, team.color))}
+              {unassignedMembers.length > 0 && renderTeamSection(null, 'unassigned', '未所属', '#9CA3AF')}
             </tbody>
           </table>
         </div>
