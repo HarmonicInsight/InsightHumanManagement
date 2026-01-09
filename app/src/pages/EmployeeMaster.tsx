@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, UserCheck, UserX, UserPlus as UserPlusIcon } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Edit2, Trash2, Search, UserCheck, UserX, UserPlus as UserPlusIcon, Upload, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors } from '../types';
@@ -12,6 +13,40 @@ const STATUS_OPTIONS: { value: EmployeeStatus; label: string }[] = [
   { value: 'inactive', label: '退職' },
   { value: 'planned', label: '入社予定' },
 ];
+
+// JOBRANKの変換マップ
+const JOBRANK_MAP: Record<string, Rank> = {
+  'シニアマネージャー': 'SMGR',
+  'SMGR': 'SMGR',
+  'マネージャー': 'MGR',
+  'MGR': 'MGR',
+  'シニアコンサルタント': 'Scon',
+  'Scon': 'Scon',
+  'コンサルタント': 'CONS',
+  'CONS': 'CONS',
+};
+
+const REVERSE_JOBRANK_MAP: Record<Rank, string> = {
+  'SMGR': 'シニアマネージャー',
+  'MGR': 'マネージャー',
+  'Scon': 'シニアコンサルタント',
+  'CONS': 'コンサルタント',
+};
+
+const STATUS_MAP: Record<string, EmployeeStatus> = {
+  '在籍': 'active',
+  '退職': 'inactive',
+  '入社予定': 'planned',
+  'active': 'active',
+  'inactive': 'inactive',
+  'planned': 'planned',
+};
+
+const REVERSE_STATUS_MAP: Record<EmployeeStatus, string> = {
+  'active': '在籍',
+  'inactive': '退職',
+  'planned': '入社予定',
+};
 
 const emptyEvaluation: Evaluation = {
   grade: null,
@@ -37,6 +72,8 @@ export function EmployeeMaster() {
   const [rankFilter, setRankFilter] = useState<Rank | 'all'>('all');
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<Partial<Member>>({
     name: '',
     rank: 'CONS',
@@ -139,6 +176,149 @@ export function EmployeeMaster() {
     }
   };
 
+  // インポート処理
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+
+        let successCount = 0;
+        const errors: string[] = [];
+
+        jsonData.forEach((row, index) => {
+          const rowNum = index + 2; // ヘッダー行を考慮
+          const name = String(row['氏名'] || row['名前'] || row['社員名'] || '').trim();
+
+          if (!name) {
+            errors.push(`行${rowNum}: 氏名が空です`);
+            return;
+          }
+
+          // JOBRANK変換
+          const jobrankRaw = String(row['JOBRANK'] || row['ランク'] || row['役職'] || 'CONS').trim();
+          const rank = JOBRANK_MAP[jobrankRaw] || 'CONS';
+
+          // ステータス変換
+          const statusRaw = String(row['ステータス'] || row['status'] || '在籍').trim();
+          const status = STATUS_MAP[statusRaw] || 'active';
+
+          // 日付処理
+          let joinDate = '';
+          let leaveDate = '';
+
+          const joinDateRaw = row['入社日'] || row['入社年月日'];
+          if (joinDateRaw) {
+            if (typeof joinDateRaw === 'number') {
+              // Excel serial date
+              const date = XLSX.SSF.parse_date_code(joinDateRaw);
+              joinDate = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+            } else {
+              joinDate = String(joinDateRaw);
+            }
+          }
+
+          const leaveDateRaw = row['退社日'] || row['退職日'];
+          if (leaveDateRaw) {
+            if (typeof leaveDateRaw === 'number') {
+              const date = XLSX.SSF.parse_date_code(leaveDateRaw);
+              leaveDate = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+            } else {
+              leaveDate = String(leaveDateRaw);
+            }
+          }
+
+          const email = String(row['メール'] || row['メールアドレス'] || row['email'] || '').trim();
+          const department = String(row['部署'] || row['所属'] || '').trim();
+
+          // 既存社員との重複チェック（名前で判定）
+          const existingMember = members.find((m) => m.name === name);
+
+          if (existingMember) {
+            // 既存社員を更新
+            updateMember({
+              ...existingMember,
+              rank,
+              status,
+              joinDate: joinDate || existingMember.joinDate,
+              leaveDate: leaveDate || existingMember.leaveDate,
+              email: email || existingMember.email,
+              department: department || existingMember.department,
+            });
+          } else {
+            // 新規社員を追加
+            addMember({
+              name,
+              rank,
+              teamId: null,
+              evaluation: emptyEvaluation,
+              skills: emptySkills,
+              status,
+              joinDate: joinDate || undefined,
+              leaveDate: leaveDate || undefined,
+              email: email || undefined,
+              department: department || undefined,
+            });
+          }
+          successCount++;
+        });
+
+        setImportResult({ success: successCount, errors });
+        setTimeout(() => setImportResult(null), 5000);
+      } catch (error) {
+        console.error('Import error:', error);
+        setImportResult({ success: 0, errors: ['ファイルの読み込みに失敗しました'] });
+        setTimeout(() => setImportResult(null), 5000);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+
+    // ファイル入力をリセット
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // エクスポート処理
+  const handleExport = () => {
+    const exportData = members.map((member) => ({
+      '氏名': member.name,
+      'JOBRANK': REVERSE_JOBRANK_MAP[member.rank] || member.rank,
+      'ステータス': REVERSE_STATUS_MAP[member.status || 'active'],
+      '入社日': member.joinDate || '',
+      '退社日': member.leaveDate || '',
+      'メール': member.email || '',
+      '部署': member.department || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    // 列幅を設定
+    worksheet['!cols'] = [
+      { wch: 15 }, // 氏名
+      { wch: 18 }, // JOBRANK
+      { wch: 10 }, // ステータス
+      { wch: 12 }, // 入社日
+      { wch: 12 }, // 退社日
+      { wch: 25 }, // メール
+      { wch: 20 }, // 部署
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '社員マスタ');
+
+    // ファイル名に年度を含める
+    const fileName = `社員マスタ_${currentYear}年度_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   const getStatusIcon = (status: EmployeeStatus | undefined) => {
     switch (status) {
       case 'inactive':
@@ -178,6 +358,25 @@ export function EmployeeMaster() {
           社員の追加・削除はこの年度のみに反映されます。他の年度には影響しません。
         </span>
       </div>
+
+      {/* インポート結果の通知 */}
+      {importResult && (
+        <div className={`import-result ${importResult.errors.length > 0 ? 'has-errors' : 'success'}`}>
+          <div className="import-result-content">
+            <strong>{importResult.success}件</strong>のデータをインポートしました。
+            {importResult.errors.length > 0 && (
+              <div className="import-errors">
+                {importResult.errors.slice(0, 3).map((err, i) => (
+                  <div key={i}>{err}</div>
+                ))}
+                {importResult.errors.length > 3 && (
+                  <div>他 {importResult.errors.length - 3} 件のエラー</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 統計カード */}
       <div className="stats-grid">
@@ -244,10 +443,35 @@ export function EmployeeMaster() {
             ))}
           </select>
 
-          <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={openAddModal}>
-            <Plus size={16} style={{ marginRight: 4 }} />
-            社員追加
-          </button>
+          <div className="action-group" style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".xlsx,.xls"
+              onChange={handleImport}
+              style={{ display: 'none' }}
+            />
+            <button
+              className="btn-secondary"
+              onClick={() => fileInputRef.current?.click()}
+              title="Excelファイルをインポート"
+            >
+              <Upload size={16} style={{ marginRight: 4 }} />
+              インポート
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={handleExport}
+              title="Excelファイルにエクスポート"
+            >
+              <Download size={16} style={{ marginRight: 4 }} />
+              エクスポート
+            </button>
+            <button className="btn-primary" onClick={openAddModal}>
+              <Plus size={16} style={{ marginRight: 4 }} />
+              社員追加
+            </button>
+          </div>
         </div>
 
         <table className="table">

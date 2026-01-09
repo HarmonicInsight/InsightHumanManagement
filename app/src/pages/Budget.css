@@ -97,9 +97,18 @@
   min-width: 70px;
 }
 
+.salary-table .sticky-col-4 {
+  position: sticky;
+  left: 300px;
+  background: white;
+  z-index: 2;
+  min-width: 80px;
+}
+
 .salary-table th.sticky-col,
 .salary-table th.sticky-col-2,
-.salary-table th.sticky-col-3 {
+.salary-table th.sticky-col-3,
+.salary-table th.sticky-col-4 {
   background: var(--gray-50);
   z-index: 3;
 }
@@ -117,7 +126,8 @@
 
 .salary-table.dual-row tbody tr.unit-row .sticky-col,
 .salary-table.dual-row tbody tr.unit-row .sticky-col-2,
-.salary-table.dual-row tbody tr.unit-row .sticky-col-3 {
+.salary-table.dual-row tbody tr.unit-row .sticky-col-3,
+.salary-table.dual-row tbody tr.unit-row .sticky-col-4 {
   vertical-align: middle;
 }
 

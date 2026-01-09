@@ -143,3 +143,50 @@
 .member-name {
   font-weight: 500;
 }
+
+/* Import result notification */
+.import-result {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 10px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.import-result.success {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border: 1px solid #6EE7B7;
+  color: #065F46;
+}
+
+.import-result.has-errors {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  border: 1px solid #FCD34D;
+  color: #92400E;
+}
+
+.import-result-content {
+  font-size: 14px;
+}
+
+.import-result-content strong {
+  font-size: 16px;
+}
+
+.import-errors {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed currentColor;
+  font-size: 13px;
+  opacity: 0.8;
+}
