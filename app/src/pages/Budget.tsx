@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
-import { Plus, Edit2, Trash2, DollarSign, Users, UserPlus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, DollarSign, Users, UserPlus, ChevronDown, ChevronRight, TrendingUp } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors, DefaultAgentFeeRate, RankOrder } from '../types';
@@ -17,7 +17,6 @@ export function Budget() {
     teams,
     budget,
     initializeBudget,
-    updateRankUnitPrices,
     updateMemberSalary,
     addNewHire,
     updateNewHire,
@@ -65,14 +64,6 @@ export function Budget() {
   const getUnitPrice = (rank: Rank): number => {
     const price = rankUnitPrices.find((p) => p.rank === rank);
     return price?.unitPrice || 0;
-  };
-
-  const handleUnitPriceChange = (rank: Rank, value: string) => {
-    const newPrice = Number(value) || 0;
-    const updated = rankUnitPrices.map((p) =>
-      p.rank === rank ? { ...p, unitPrice: newPrice } : p
-    );
-    updateRankUnitPrices(updated);
   };
 
   const getMemberSalary = (memberId: string): MemberSalary => {
@@ -178,6 +169,19 @@ export function Budget() {
   );
 
   const totalLaborCost = totalMemberSalary + totalNewHireSalary + totalAgentFees;
+
+  // チーム別標準原価合計を計算
+  const calculateTeamUnitPriceTotal = (teamId: string | null) => {
+    return members
+      .filter((m) => m.teamId === teamId)
+      .reduce((sum, m) => sum + calculateMemberUnitPriceTotal(m.rank), 0);
+  };
+
+  const maxTeamUnitPrice = Math.max(
+    ...teams.map((t) => calculateTeamUnitPriceTotal(t.id)),
+    calculateTeamUnitPriceTotal(null),
+    1
+  );
 
   const handleSaveHire = () => {
     if (!hireForm.name.trim()) return;
@@ -349,6 +353,59 @@ export function Budget() {
         <YearSelector />
       </div>
 
+      {/* チーム別標準原価サマリー */}
+      <div className="budget-summary-card">
+        <div className="budget-summary-header">
+          <h3>FY{String(currentYear).slice(2)} 標準原価</h3>
+          <div className="budget-summary-total">
+            <TrendingUp size={18} />
+            <span>{totalMemberUnitPrice.toLocaleString()}万円</span>
+          </div>
+        </div>
+        <div className="budget-summary-bars">
+          {teams.map((team) => {
+            const teamTotal = calculateTeamUnitPriceTotal(team.id);
+            const teamMemberCount = members.filter((m) => m.teamId === team.id).length;
+            const percentage = (teamTotal / maxTeamUnitPrice) * 100;
+            return (
+              <div key={team.id} className="budget-summary-row">
+                <div className="budget-summary-label" style={{ color: team.color }}>{team.name}</div>
+                <div className="budget-summary-bar-container">
+                  <div
+                    className="budget-summary-bar"
+                    style={{ width: `${percentage}%`, background: team.color }}
+                  />
+                </div>
+                <div className="budget-summary-info">
+                  <span className="budget-summary-count">{teamMemberCount}名</span>
+                  <span className="budget-summary-amount">{teamTotal.toLocaleString()}</span>
+                </div>
+              </div>
+            );
+          })}
+          {(() => {
+            const unassignedTotal = calculateTeamUnitPriceTotal(null);
+            const unassignedCount = members.filter((m) => !m.teamId).length;
+            if (unassignedCount === 0) return null;
+            return (
+              <div className="budget-summary-row">
+                <div className="budget-summary-label" style={{ color: '#9CA3AF' }}>未所属</div>
+                <div className="budget-summary-bar-container">
+                  <div
+                    className="budget-summary-bar"
+                    style={{ width: `${(unassignedTotal / maxTeamUnitPrice) * 100}%`, background: '#9CA3AF' }}
+                  />
+                </div>
+                <div className="budget-summary-info">
+                  <span className="budget-summary-count">{unassignedCount}名</span>
+                  <span className="budget-summary-amount">{unassignedTotal.toLocaleString()}</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
       {/* サマリーカード */}
       <div className="stats-grid">
         <div className="stat-card">
@@ -378,33 +435,6 @@ export function Budget() {
           <div className="stat-icon">
             <DollarSign size={24} color="#8B5CF6" />
           </div>
-        </div>
-      </div>
-
-      {/* 単価マスタ */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">単価マスタ（{currentYear}年度）</h3>
-          <span className="card-subtitle">※年度ごとに設定できます</span>
-        </div>
-        <div className="unit-price-grid">
-          {RANKS.map((rank) => {
-            const price = rankUnitPrices.find((p) => p.rank === rank);
-            return (
-              <div key={rank} className="unit-price-item" style={{ borderLeftColor: RankColors[rank] }}>
-                <div className="unit-price-label">{RankLabels[rank]}</div>
-                <div className="unit-price-input">
-                  <input
-                    type="number"
-                    value={price?.unitPrice || ''}
-                    onChange={(e) => handleUnitPriceChange(rank, e.target.value)}
-                    placeholder="0"
-                  />
-                  <span className="unit">万円/月</span>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Network, Home, Settings, Wallet, Award, UserCog, Radar } from 'lucide-react';
+import { Network, Home, Settings, Wallet, Award, UserCog, Radar, Calculator } from 'lucide-react';
 import './Sidebar.css';
 
 export function Sidebar() {
@@ -30,6 +30,11 @@ export function Sidebar() {
           <span>組織・チーム</span>
         </NavLink>
 
+        <NavLink to="/unit-price" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Calculator size={20} />
+          <span>単価マスタ</span>
+        </NavLink>
+
         <div className="nav-section">評価・スキル</div>
 
         <NavLink to="/skillmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -46,7 +51,7 @@ export function Sidebar() {
 
         <NavLink to="/budget" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <Wallet size={20} />
-          <span>予算・単価</span>
+          <span>予算管理</span>
         </NavLink>
       </nav>
 
