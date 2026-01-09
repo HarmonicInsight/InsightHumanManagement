@@ -1,374 +1,441 @@
-import { useState, useEffect, Fragment } from 'react';
-import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Trash2, Calculator } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
-import { RankLabels, RankColors, RankOrder } from '../types';
-import type { Rank, Team, Member } from '../types';
-import './Budget.css';
+import { RankLabels, RankColors, RankOrder, YearlyGradeColors } from '../types';
+import type { Rank, Member, YearlyGrade } from '../types';
+import './BudgetSimulation.css';
 
-const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+// 評価別デフォルト昇給率
+const DEFAULT_RAISE_RATES: Record<string, number> = {
+  S: 10,
+  A: 6,
+  B: 4,
+  C: 0,
+};
+
+interface RaisePattern {
+  id: string;
+  name: string;
+  rates: Record<string, number>; // S, A, B, C の昇給率
+}
+
+interface MemberSimulation {
+  member: Member;
+  currentSalary: number;
+  evaluation: YearlyGrade;
+  raiseRate: number;
+  nextYearSalary: number;
+}
 
 export function BudgetSimulation() {
-  const {
-    members,
-    teams,
-    budget,
-    initializeBudget,
-  } = useApp();
+  const { members, teams, budget, currentYear, yearlyEvaluations } = useApp();
 
-  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set(['unassigned', ...teams.map(t => t.id)]));
-  const [globalMultiplier, setGlobalMultiplier] = useState<number>(1.4);
-  const [memberMultipliers, setMemberMultipliers] = useState<Record<string, number>>({});
-  // シミュレーション用のローカル給与データ
-  const [simulationSalaries, setSimulationSalaries] = useState<Record<string, number | null>>({});
+  // シミュレーション用の給与データ（ローカル）
+  const [simulationSalaries, setSimulationSalaries] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    if (!budget) {
-      initializeBudget();
-    }
-  }, [budget, initializeBudget]);
+  // シミュレーション用の評価データ（ローカル）
+  const [simulationEvaluations, setSimulationEvaluations] = useState<Record<string, YearlyGrade>>({});
 
-  const toggleTeamExpanded = (teamId: string) => {
-    setExpandedTeams((prev) => {
-      const next = new Set(prev);
-      if (next.has(teamId)) {
-        next.delete(teamId);
-      } else {
-        next.add(teamId);
-      }
-      return next;
-    });
-  };
+  // 昇給率パターン
+  const [patterns, setPatterns] = useState<RaisePattern[]>([
+    { id: '1', name: 'パターン1', rates: { S: 10, A: 6, B: 4, C: 0 } },
+    { id: '2', name: 'パターン2', rates: { S: 10, A: 5, B: 3, C: 0 } },
+    { id: '3', name: 'パターン3', rates: { S: 8, A: 4, B: 2, C: 0 } },
+  ]);
 
-  if (!budget) {
-    return <div className="main-content">読み込み中...</div>;
-  }
+  // 標準給与合計（予算）を計算
+  const standardSalaryTotal = useMemo(() => {
+    if (!budget) return 0;
+    return budget.rankUnitPrices.reduce((sum, rp) => {
+      const count = members.filter(m => m.rank === rp.rank).length;
+      return sum + rp.unitPrice * 12 * count;
+    }, 0);
+  }, [budget, members]);
 
-  const rankUnitPrices = budget.rankUnitPrices;
-
-  const getUnitPrice = (rank: Rank): number => {
-    const price = rankUnitPrices.find((p) => p.rank === rank);
-    return price?.unitPrice || 0;
-  };
-
-  // シミュレーション用の給与を取得
-  const getSimulationSalary = (memberId: string): number | null => {
+  // メンバーの現在給与を取得
+  const getMemberSalary = (memberId: string, rank: Rank): number => {
     if (simulationSalaries[memberId] !== undefined) {
       return simulationSalaries[memberId];
     }
-    // 予算データから初期値を取得
-    const memberSalary = budget.memberSalaries.find(s => s.memberId === memberId);
-    if (memberSalary) {
-      const values = MONTHS.map((m) => memberSalary.monthlySalaries[m]);
-      const firstValue = values[0];
-      if (firstValue !== null && firstValue !== undefined) {
-        const allSame = values.every((v) => v === firstValue);
-        if (allSame) return firstValue;
+    // 予算データから取得
+    if (budget) {
+      const memberSalary = budget.memberSalaries.find(s => s.memberId === memberId);
+      if (memberSalary) {
+        const firstMonth = memberSalary.monthlySalaries[1];
+        if (firstMonth !== null && firstMonth !== undefined) {
+          return firstMonth;
+        }
       }
+      // 標準単価を使用
+      const unitPrice = budget.rankUnitPrices.find(p => p.rank === rank);
+      return unitPrice?.unitPrice || 100;
     }
-    return null;
+    return 100;
   };
 
-  // シミュレーション用の給与を設定
-  const setSimulationSalary = (memberId: string, value: string) => {
-    const salary = value === '' ? null : Number(value);
-    setSimulationSalaries(prev => ({ ...prev, [memberId]: salary }));
+  // メンバーの年度評価を取得
+  const getMemberEvaluation = (memberId: string): YearlyGrade => {
+    if (simulationEvaluations[memberId] !== undefined) {
+      return simulationEvaluations[memberId];
+    }
+    // 年度評価データから取得
+    const evalData = yearlyEvaluations.find(e => e.memberId === memberId);
+    if (evalData && evalData.evaluations[currentYear]) {
+      return evalData.evaluations[currentYear];
+    }
+    return 'B'; // デフォルト
   };
 
-  const getMembersByTeam = (teamId: string | null) => {
-    return members
-      .filter((m) => m.teamId === teamId)
-      .sort((a, b) => RankOrder[b.rank] - RankOrder[a.rank]);
+  // 評価に応じた昇給率を取得
+  const getRaiseRate = (evaluation: YearlyGrade, patternRates: Record<string, number>): number => {
+    if (!evaluation) return patternRates['B'] || 4;
+    return patternRates[evaluation] ?? DEFAULT_RAISE_RATES[evaluation] ?? 4;
   };
 
-  const calculateMemberUnitPriceTotal = (rank: Rank): number => {
-    return getUnitPrice(rank) * 12;
+  // 翌年給与を計算
+  const calculateNextYearSalary = (currentSalary: number, raiseRate: number): number => {
+    return Math.round(currentSalary * (1 + raiseRate / 100) * 10) / 10;
   };
 
-  const getMemberMultiplier = (memberId: string): number => {
-    return memberMultipliers[memberId] ?? globalMultiplier;
-  };
-
-  const setMemberMultiplier = (memberId: string, value: number) => {
-    setMemberMultipliers(prev => ({ ...prev, [memberId]: value }));
-  };
-
-  const applyGlobalMultiplier = () => {
-    const newMultipliers: Record<string, number> = {};
-    members.forEach(m => {
-      newMultipliers[m.id] = globalMultiplier;
+  // メンバーをランク・チーム順でソート
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      const rankDiff = RankOrder[b.rank] - RankOrder[a.rank];
+      if (rankDiff !== 0) return rankDiff;
+      return (a.teamId || '').localeCompare(b.teamId || '');
     });
-    setMemberMultipliers(newMultipliers);
+  }, [members]);
+
+  // パターン追加
+  const addPattern = () => {
+    const newId = String(Date.now());
+    setPatterns(prev => [
+      ...prev,
+      { id: newId, name: `パターン${prev.length + 1}`, rates: { S: 10, A: 6, B: 4, C: 0 } }
+    ]);
   };
 
-  const calculateManagedSalary = (baseSalary: number, memberId: string): number => {
-    const mult = getMemberMultiplier(memberId);
-    return Math.round(baseSalary * mult * 10) / 10;
+  // パターン削除
+  const removePattern = (id: string) => {
+    if (patterns.length <= 1) return;
+    setPatterns(prev => prev.filter(p => p.id !== id));
   };
 
-  const calculateMemberManagedSalaryTotal = (memberId: string, rank: Rank): number => {
-    const baseSalary = getSimulationSalary(memberId);
-    const unitPrice = getUnitPrice(rank);
-    const salaryValue = baseSalary !== null ? baseSalary : unitPrice;
-    let total = 0;
-    MONTHS.forEach(() => {
-      total += calculateManagedSalary(salaryValue, memberId);
+  // パターンの昇給率を更新
+  const updatePatternRate = (patternId: string, grade: string, value: number) => {
+    setPatterns(prev => prev.map(p => {
+      if (p.id === patternId) {
+        return { ...p, rates: { ...p.rates, [grade]: value } };
+      }
+      return p;
+    }));
+  };
+
+  // パターン名を更新
+  const updatePatternName = (patternId: string, name: string) => {
+    setPatterns(prev => prev.map(p => {
+      if (p.id === patternId) {
+        return { ...p, name };
+      }
+      return p;
+    }));
+  };
+
+  // 各パターンのシミュレーション結果を計算
+  const simulationResults = useMemo(() => {
+    return patterns.map(pattern => {
+      let totalCurrentSalary = 0;
+      let totalNextYearSalary = 0;
+      const memberResults: MemberSimulation[] = [];
+
+      sortedMembers.forEach(member => {
+        const currentSalary = getMemberSalary(member.id, member.rank);
+        const evaluation = getMemberEvaluation(member.id);
+        const raiseRate = getRaiseRate(evaluation, pattern.rates);
+        const nextYearSalary = calculateNextYearSalary(currentSalary, raiseRate);
+
+        totalCurrentSalary += currentSalary * 12;
+        totalNextYearSalary += nextYearSalary * 12;
+
+        memberResults.push({
+          member,
+          currentSalary,
+          evaluation,
+          raiseRate,
+          nextYearSalary,
+        });
+      });
+
+      const difference = totalNextYearSalary - standardSalaryTotal;
+      const isWithinBudget = totalNextYearSalary <= standardSalaryTotal;
+
+      return {
+        pattern,
+        memberResults,
+        totalCurrentSalary,
+        totalNextYearSalary,
+        difference,
+        isWithinBudget,
+      };
     });
-    return total;
-  };
+  }, [patterns, sortedMembers, simulationSalaries, simulationEvaluations, standardSalaryTotal]);
 
-  const totalMemberUnitPrice = members.reduce(
-    (sum, m) => sum + calculateMemberUnitPriceTotal(m.rank),
-    0
-  );
-
-  const totalMemberManagedSalary = members.reduce(
-    (sum, m) => sum + calculateMemberManagedSalaryTotal(m.id, m.rank),
-    0
-  );
-
-  const calculateTeamUnitPriceTotal = (teamId: string | null) => {
-    return members
-      .filter((m) => m.teamId === teamId)
-      .reduce((sum, m) => sum + calculateMemberUnitPriceTotal(m.rank), 0);
-  };
-
-  const calculateTeamManagedSalaryTotal = (teamId: string | null) => {
-    return members
-      .filter((m) => m.teamId === teamId)
-      .reduce((sum, m) => sum + calculateMemberManagedSalaryTotal(m.id, m.rank), 0);
-  };
-
-  const getTeamMemberCount = (teamId: string | null) => {
-    return members.filter((m) => m.teamId === teamId).length;
-  };
-
-  const renderMemberRows = (teamMembers: Member[]) => {
-    return teamMembers.map((member) => {
-      const unitPrice = getUnitPrice(member.rank);
-      const unitPriceTotal = calculateMemberUnitPriceTotal(member.rank);
-      const managedSalaryTotal = calculateMemberManagedSalaryTotal(member.id, member.rank);
-      const baseSalary = getSimulationSalary(member.id);
-      const memberMult = getMemberMultiplier(member.id);
-      const managedBaseSalary = baseSalary !== null ? calculateManagedSalary(baseSalary, member.id) : calculateManagedSalary(unitPrice, member.id);
-      const salaryForMonth = baseSalary !== null ? baseSalary : unitPrice;
-
-      return (
-        <Fragment key={member.id}>
-          <tr className="unit-row">
-            <td className="sticky-col" rowSpan={2}>
-              <div className="member-info-cell" style={{ paddingLeft: 16 }}>
-                <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
-                  {member.name.charAt(0)}
-                </div>
-                <span>{member.name}</span>
-              </div>
-            </td>
-            <td className="sticky-col-2" rowSpan={2}>
-              <span
-                className="rank-badge"
-                style={{ background: `${RankColors[member.rank]}20`, color: RankColors[member.rank] }}
-              >
-                {RankLabels[member.rank]}
-              </span>
-            </td>
-            <td className="sticky-col-3" rowSpan={2}>
-              <span className="unit-price-display">{unitPrice}万円</span>
-            </td>
-            <td className="sticky-col-4" rowSpan={2}>
-              <input
-                type="number"
-                className="salary-input"
-                value={baseSalary ?? ''}
-                onChange={(e) => setSimulationSalary(member.id, e.target.value)}
-                placeholder={String(unitPrice)}
-                style={{ width: 70 }}
-              />
-            </td>
-            <td className="sticky-col-5" rowSpan={2}>
-              <input
-                type="number"
-                className="multiplier-input-small"
-                value={memberMult}
-                onChange={(e) => setMemberMultiplier(member.id, Number(e.target.value) || 1)}
-                step={0.1}
-                min={1}
-                max={3}
-              />
-            </td>
-            <td className="sticky-col-6" rowSpan={2}>
-              <span className="managed-salary-display">{managedBaseSalary}</span>
-            </td>
-            <td className="row-type unit">標準単価</td>
-            {MONTHS.map((month) => (
-              <td key={month} className="unit-cell">{unitPrice}</td>
-            ))}
-            <td className="total-cell unit">{unitPriceTotal.toLocaleString()}</td>
-          </tr>
-          <tr className="salary-row">
-            <td className="row-type managed">管理給与</td>
-            {MONTHS.map((month) => {
-              const managedValue = calculateManagedSalary(salaryForMonth, member.id);
-              return (
-                <td key={month} className="managed-cell">{managedValue}</td>
-              );
-            })}
-            <td className="total-cell managed">{managedSalaryTotal.toLocaleString()}</td>
-          </tr>
-        </Fragment>
-      );
+  // 評価別人数を計算
+  const evaluationCounts = useMemo(() => {
+    const counts: Record<string, number> = { S: 0, A: 0, B: 0, C: 0 };
+    sortedMembers.forEach(member => {
+      const eval_ = getMemberEvaluation(member.id);
+      if (eval_) counts[eval_] = (counts[eval_] || 0) + 1;
     });
+    return counts;
+  }, [sortedMembers, simulationEvaluations]);
+
+  const getTeamName = (teamId: string | null): string => {
+    if (!teamId) return '未所属';
+    const team = teams.find(t => t.id === teamId);
+    return team?.name || '未所属';
   };
-
-  const renderTeamSection = (team: Team | null, teamId: string, teamName: string, teamColor: string) => {
-    const teamMembers = getMembersByTeam(team?.id || null);
-    if (teamMembers.length === 0) return null;
-    const isExpanded = expandedTeams.has(teamId);
-
-    const teamUnitPriceTotal = teamMembers.reduce((sum, m) => sum + calculateMemberUnitPriceTotal(m.rank), 0);
-    const teamManagedSalaryTotal = teamMembers.reduce((sum, m) => sum + calculateMemberManagedSalaryTotal(m.id, m.rank), 0);
-
-    return (
-      <Fragment key={teamId}>
-        <tr
-          className="team-header-row"
-          style={{ background: `${teamColor}15`, cursor: 'pointer' }}
-          onClick={() => toggleTeamExpanded(teamId)}
-        >
-          <td rowSpan={2} style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              <div style={{ width: 4, height: 24, background: teamColor, borderRadius: 2 }} />
-              <span style={{ fontWeight: 600, color: '#374151' }}>{teamName}</span>
-              <span style={{ color: '#6B7280', fontSize: 13 }}>({teamMembers.length}名)</span>
-            </div>
-          </td>
-          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
-          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
-          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
-          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
-          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
-          <td className="row-type unit" style={{ fontSize: 11 }}>標準単価</td>
-          {MONTHS.map((month) => (
-            <td key={month} style={{ background: `${teamColor}10` }}></td>
-          ))}
-          <td style={{ background: '#EFF6FF', fontWeight: 600, fontSize: 12, textAlign: 'right', paddingRight: 8, color: '#3B82F6' }}>
-            {teamUnitPriceTotal.toLocaleString()}
-          </td>
-        </tr>
-        <tr
-          className="team-header-row"
-          style={{ background: `${teamColor}15`, cursor: 'pointer' }}
-          onClick={() => toggleTeamExpanded(teamId)}
-        >
-          <td className="row-type managed" style={{ fontSize: 11 }}>管理給与</td>
-          {MONTHS.map((month) => (
-            <td key={`managed-${month}`} style={{ background: `${teamColor}10` }}></td>
-          ))}
-          <td style={{ background: '#FDF2F8', fontWeight: 600, fontSize: 12, textAlign: 'right', paddingRight: 8, color: '#DB2777' }}>
-            {teamManagedSalaryTotal.toLocaleString()}
-          </td>
-        </tr>
-        {isExpanded && renderMemberRows(teamMembers)}
-      </Fragment>
-    );
-  };
-
-  const unassignedMembers = getMembersByTeam(null);
 
   return (
     <div className="main-content">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 className="page-title">予算シミュレーション</h1>
-          <p className="page-subtitle">人件費のシミュレーション（変更は保存されません）</p>
+          <p className="page-subtitle">評価に応じた昇給率で翌年給与を試算（変更は保存されません）</p>
         </div>
         <YearSelector />
       </div>
 
-      {/* チーム別サマリーテーブル */}
-      <div className="team-summary-grid">
-        <div className="team-summary-card total">
-          <div className="team-summary-header">
-            <span className="team-summary-title">合計</span>
-          </div>
-          <div className="team-summary-row">
-            <span className="team-summary-label">人数</span>
-            <span className="team-summary-value">{members.length}名</span>
-          </div>
-          <div className="team-summary-row">
-            <span className="team-summary-label">標準単価</span>
-            <span className="team-summary-value">{totalMemberUnitPrice.toLocaleString()}</span>
-          </div>
-          <div className="team-summary-row highlight">
-            <span className="team-summary-label">管理給与</span>
-            <span className="team-summary-value">{totalMemberManagedSalary.toLocaleString()}</span>
+      {/* サマリーカード */}
+      <div className="sim-summary-cards">
+        <div className="sim-summary-card">
+          <div className="sim-summary-label">メンバー数</div>
+          <div className="sim-summary-value">{members.length}名</div>
+        </div>
+        <div className="sim-summary-card">
+          <div className="sim-summary-label">標準給与予算（年間）</div>
+          <div className="sim-summary-value">{standardSalaryTotal.toLocaleString()}万円</div>
+        </div>
+        <div className="sim-summary-card evaluation-counts">
+          <div className="sim-summary-label">評価分布</div>
+          <div className="eval-distribution">
+            {['S', 'A', 'B', 'C'].map(grade => (
+              <span key={grade} className="eval-count" style={{ color: YearlyGradeColors[grade] }}>
+                {grade}: {evaluationCounts[grade]}名
+              </span>
+            ))}
           </div>
         </div>
-        {teams.map((team) => (
-          <div key={team.id} className="team-summary-card" style={{ borderTopColor: team.color }}>
-            <div className="team-summary-header">
-              <span className="team-summary-title" style={{ color: team.color }}>{team.name}</span>
-            </div>
-            <div className="team-summary-row">
-              <span className="team-summary-label">人数</span>
-              <span className="team-summary-value">{getTeamMemberCount(team.id)}名</span>
-            </div>
-            <div className="team-summary-row">
-              <span className="team-summary-label">標準単価</span>
-              <span className="team-summary-value">{calculateTeamUnitPriceTotal(team.id).toLocaleString()}</span>
-            </div>
-            <div className="team-summary-row highlight">
-              <span className="team-summary-label">管理給与</span>
-              <span className="team-summary-value">{calculateTeamManagedSalaryTotal(team.id).toLocaleString()}</span>
-            </div>
-          </div>
-        ))}
       </div>
 
-      {/* メンバー別単価・給与一覧 */}
+      {/* 昇給率パターン設定 */}
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">メンバー別単価・給与シミュレーション</h3>
-          <div className="multiplier-control">
-            <Settings size={16} />
-            <span>一括倍率:</span>
-            <input
-              type="number"
-              className="multiplier-input"
-              value={globalMultiplier}
-              onChange={(e) => setGlobalMultiplier(Number(e.target.value) || 1)}
-              step={0.1}
-              min={1}
-              max={3}
-            />
-            <button className="btn-apply" onClick={applyGlobalMultiplier}>
-              全員に反映
-            </button>
-          </div>
+          <h3 className="card-title">
+            <Calculator size={18} />
+            昇給率パターン設定
+          </h3>
+          <button className="btn-add-pattern" onClick={addPattern}>
+            <Plus size={16} />
+            パターン追加
+          </button>
         </div>
-        <div className="salary-table-container">
-          <table className="salary-table dual-row">
+        <div className="pattern-settings">
+          <table className="pattern-table">
             <thead>
               <tr>
-                <th className="sticky-col" rowSpan={2}>メンバー</th>
-                <th className="sticky-col-2" rowSpan={2}>ランク</th>
-                <th className="sticky-col-3" rowSpan={2}>単価</th>
-                <th className="sticky-col-4" rowSpan={2}>給与</th>
-                <th className="sticky-col-5" rowSpan={2}>倍率</th>
-                <th className="sticky-col-6" rowSpan={2}>管理給与</th>
-                <th rowSpan={2}>区分</th>
-                {MONTH_LABELS.map((label, i) => (
-                  <th key={i}>{label}</th>
-                ))}
-                <th>年間合計</th>
+                <th>パターン名</th>
+                <th style={{ color: YearlyGradeColors['S'] }}>S評価 (%)</th>
+                <th style={{ color: YearlyGradeColors['A'] }}>A評価 (%)</th>
+                <th style={{ color: YearlyGradeColors['B'] }}>B評価 (%)</th>
+                <th style={{ color: YearlyGradeColors['C'] }}>C評価 (%)</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {teams.map((team) => renderTeamSection(team, team.id, team.name, team.color))}
-              {unassignedMembers.length > 0 && renderTeamSection(null, 'unassigned', '未所属', '#9CA3AF')}
+              {patterns.map(pattern => (
+                <tr key={pattern.id}>
+                  <td>
+                    <input
+                      type="text"
+                      className="pattern-name-input"
+                      value={pattern.name}
+                      onChange={(e) => updatePatternName(pattern.id, e.target.value)}
+                    />
+                  </td>
+                  {['S', 'A', 'B', 'C'].map(grade => (
+                    <td key={grade}>
+                      <input
+                        type="number"
+                        className="rate-input"
+                        value={pattern.rates[grade]}
+                        onChange={(e) => updatePatternRate(pattern.id, grade, Number(e.target.value))}
+                        min={0}
+                        max={50}
+                        step={1}
+                      />
+                    </td>
+                  ))}
+                  <td>
+                    <button
+                      className="btn-remove-pattern"
+                      onClick={() => removePattern(pattern.id)}
+                      disabled={patterns.length <= 1}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* シミュレーション結果比較 */}
+      <div className="card">
+        <div className="card-header">
+          <h3 className="card-title">シミュレーション結果比較</h3>
+        </div>
+        <div className="simulation-comparison">
+          <table className="comparison-table">
+            <thead>
+              <tr>
+                <th>パターン</th>
+                <th>S昇給率</th>
+                <th>A昇給率</th>
+                <th>B昇給率</th>
+                <th>C昇給率</th>
+                <th>現在給与合計</th>
+                <th>翌年給与合計</th>
+                <th>予算差額</th>
+                <th>判定</th>
+              </tr>
+            </thead>
+            <tbody>
+              {simulationResults.map(result => (
+                <tr key={result.pattern.id} className={result.isWithinBudget ? 'within-budget' : 'over-budget'}>
+                  <td className="pattern-name">{result.pattern.name}</td>
+                  <td>{result.pattern.rates['S']}%</td>
+                  <td>{result.pattern.rates['A']}%</td>
+                  <td>{result.pattern.rates['B']}%</td>
+                  <td>{result.pattern.rates['C']}%</td>
+                  <td className="amount">{result.totalCurrentSalary.toLocaleString()}</td>
+                  <td className="amount">{result.totalNextYearSalary.toLocaleString()}</td>
+                  <td className={`amount ${result.difference > 0 ? 'negative' : 'positive'}`}>
+                    {result.difference > 0 ? '+' : ''}{result.difference.toLocaleString()}
+                  </td>
+                  <td>
+                    <span className={`budget-badge ${result.isWithinBudget ? 'ok' : 'ng'}`}>
+                      {result.isWithinBudget ? '予算内' : '予算超過'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* メンバー別詳細（最初のパターン） */}
+      <div className="card">
+        <div className="card-header">
+          <h3 className="card-title">メンバー別詳細（{patterns[0]?.name}）</h3>
+        </div>
+        <div className="member-detail-table-container">
+          <table className="member-detail-table">
+            <thead>
+              <tr>
+                <th>メンバー</th>
+                <th>チーム</th>
+                <th>ランク</th>
+                <th>現在給与</th>
+                <th>年度評価</th>
+                <th>昇給率</th>
+                <th>翌年給与</th>
+                <th>年間増加額</th>
+              </tr>
+            </thead>
+            <tbody>
+              {simulationResults[0]?.memberResults.map(result => {
+                const annualIncrease = (result.nextYearSalary - result.currentSalary) * 12;
+                return (
+                  <tr key={result.member.id}>
+                    <td>
+                      <div className="member-info-cell">
+                        <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
+                          {result.member.name.charAt(0)}
+                        </div>
+                        <span>{result.member.name}</span>
+                      </div>
+                    </td>
+                    <td>{getTeamName(result.member.teamId)}</td>
+                    <td>
+                      <span
+                        className="rank-badge"
+                        style={{ background: `${RankColors[result.member.rank]}20`, color: RankColors[result.member.rank] }}
+                      >
+                        {RankLabels[result.member.rank]}
+                      </span>
+                    </td>
+                    <td className="amount-cell">
+                      <input
+                        type="number"
+                        className="salary-input-sim"
+                        value={simulationSalaries[result.member.id] ?? result.currentSalary}
+                        onChange={(e) => setSimulationSalaries(prev => ({
+                          ...prev,
+                          [result.member.id]: Number(e.target.value) || 0
+                        }))}
+                      />
+                      <span className="unit">万円</span>
+                    </td>
+                    <td>
+                      <select
+                        className="eval-select"
+                        value={getMemberEvaluation(result.member.id) || 'B'}
+                        onChange={(e) => setSimulationEvaluations(prev => ({
+                          ...prev,
+                          [result.member.id]: e.target.value as YearlyGrade
+                        }))}
+                        style={{ color: YearlyGradeColors[result.evaluation || 'B'] }}
+                      >
+                        <option value="S">S</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                      </select>
+                    </td>
+                    <td className="rate-cell">
+                      <span className="raise-rate">{result.raiseRate}%</span>
+                    </td>
+                    <td className="amount-cell next-year">
+                      {result.nextYearSalary.toLocaleString()}万円
+                    </td>
+                    <td className={`amount-cell ${annualIncrease > 0 ? 'positive' : ''}`}>
+                      {annualIncrease > 0 ? '+' : ''}{annualIncrease.toLocaleString()}万円
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="total-row">
+                <td colSpan={3}>合計</td>
+                <td className="amount-cell">
+                  {simulationResults[0]?.totalCurrentSalary.toLocaleString()}万円
+                </td>
+                <td colSpan={2}></td>
+                <td className="amount-cell next-year">
+                  {simulationResults[0]?.totalNextYearSalary.toLocaleString()}万円
+                </td>
+                <td className={`amount-cell ${(simulationResults[0]?.totalNextYearSalary - simulationResults[0]?.totalCurrentSalary) > 0 ? 'positive' : ''}`}>
+                  {(simulationResults[0]?.totalNextYearSalary - simulationResults[0]?.totalCurrentSalary) > 0 ? '+' : ''}
+                  {((simulationResults[0]?.totalNextYearSalary || 0) - (simulationResults[0]?.totalCurrentSalary || 0)).toLocaleString()}万円
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
