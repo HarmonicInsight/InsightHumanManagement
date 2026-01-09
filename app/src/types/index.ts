@@ -142,11 +142,20 @@ export interface RankUnitPrice {
   unitPrice: number; // 標準単価（万円/月）
 }
 
+// シミュレーション昇給パターン
+export interface RaisePattern {
+  id: string;
+  name: string;
+  rates: Record<string, number>; // S, A, B, C の昇給率
+  comment: string;
+}
+
 export interface BudgetData {
   year: number;
   rankUnitPrices: RankUnitPrice[];
   memberSalaries: MemberSalary[];
   newHires: NewHire[];
+  simulationPatterns?: RaisePattern[]; // 昇給率シミュレーションパターン
 }
 
 export const DefaultRankUnitPrices: RankUnitPrice[] = [

@@ -172,21 +172,29 @@
   left: 300px;
   background: white;
   z-index: 2;
-  min-width: 80px;
+  min-width: 90px;
 }
 
 .salary-table .sticky-col-5 {
   position: sticky;
-  left: 380px;
+  left: 390px;
+  background: white;
+  z-index: 2;
+  min-width: 80px;
+}
+
+.salary-table .sticky-col-6 {
+  position: sticky;
+  left: 470px;
   background: white;
   z-index: 2;
   min-width: 50px;
   text-align: center;
 }
 
-.salary-table .sticky-col-6 {
+.salary-table .sticky-col-7 {
   position: sticky;
-  left: 430px;
+  left: 520px;
   background: white;
   z-index: 2;
   min-width: 70px;
@@ -198,7 +206,8 @@
 .salary-table th.sticky-col-3,
 .salary-table th.sticky-col-4,
 .salary-table th.sticky-col-5,
-.salary-table th.sticky-col-6 {
+.salary-table th.sticky-col-6,
+.salary-table th.sticky-col-7 {
   background: var(--gray-50);
   z-index: 3;
 }
@@ -219,8 +228,14 @@
 .salary-table.dual-row tbody tr.unit-row .sticky-col-3,
 .salary-table.dual-row tbody tr.unit-row .sticky-col-4,
 .salary-table.dual-row tbody tr.unit-row .sticky-col-5,
-.salary-table.dual-row tbody tr.unit-row .sticky-col-6 {
+.salary-table.dual-row tbody tr.unit-row .sticky-col-6,
+.salary-table.dual-row tbody tr.unit-row .sticky-col-7 {
   vertical-align: middle;
+}
+
+/* Annual salary input */
+.salary-input.annual-salary-input {
+  width: 80px;
 }
 
 .row-type {
