@@ -312,27 +312,47 @@ export function Budget() {
     const isExpanded = expandedTeams.has(teamId);
 
     // チーム合計を計算
+    const teamUnitPriceTotal = teamMembers.reduce((sum, m) => sum + calculateMemberUnitPriceTotal(m.rank), 0);
     const teamSalaryTotal = teamMembers.reduce((sum, m) => sum + calculateMemberSalaryTotal(m.id, m.rank), 0);
 
     return (
       <Fragment key={teamId}>
+        {/* チームヘッダ - 標準単価行 */}
         <tr
           className="team-header-row"
           style={{ background: `${teamColor}15`, cursor: 'pointer' }}
           onClick={() => toggleTeamExpanded(teamId)}
         >
-          <td colSpan={5} style={{ padding: '8px 12px' }}>
+          <td rowSpan={2} style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              <div style={{ width: 4, height: 16, background: teamColor, borderRadius: 2 }} />
+              <div style={{ width: 4, height: 24, background: teamColor, borderRadius: 2 }} />
               <span style={{ fontWeight: 600, color: '#374151' }}>{teamName}</span>
               <span style={{ color: '#6B7280', fontSize: 13 }}>({teamMembers.length}名)</span>
             </div>
           </td>
+          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
+          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
+          <td rowSpan={2} style={{ background: `${teamColor}10` }}></td>
+          <td className="row-type unit" style={{ fontSize: 11 }}>標準単価</td>
           {MONTHS.map((month) => (
             <td key={month} style={{ background: `${teamColor}10` }}></td>
           ))}
-          <td style={{ background: `${teamColor}20`, fontWeight: 600, fontSize: 12, textAlign: 'right', paddingRight: 8 }}>
+          <td style={{ background: '#EFF6FF', fontWeight: 600, fontSize: 12, textAlign: 'right', paddingRight: 8, color: '#3B82F6' }}>
+            {teamUnitPriceTotal.toLocaleString()}
+          </td>
+        </tr>
+        {/* チームヘッダ - 給与実績行 */}
+        <tr
+          className="team-header-row"
+          style={{ background: `${teamColor}15`, cursor: 'pointer' }}
+          onClick={() => toggleTeamExpanded(teamId)}
+        >
+          <td className="row-type salary" style={{ fontSize: 11 }}>給与実績</td>
+          {MONTHS.map((month) => (
+            <td key={`salary-${month}`} style={{ background: `${teamColor}10` }}></td>
+          ))}
+          <td style={{ background: '#ECFDF5', fontWeight: 600, fontSize: 12, textAlign: 'right', paddingRight: 8, color: '#10B981' }}>
             {teamSalaryTotal.toLocaleString()}
           </td>
         </tr>
