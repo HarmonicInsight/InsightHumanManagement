@@ -18,6 +18,7 @@ interface RaisePattern {
   id: string;
   name: string;
   rates: Record<string, number>; // S, A, B, C の昇給率
+  comment: string; // コメント
 }
 
 interface MemberSimulation {
@@ -37,11 +38,11 @@ export function BudgetSimulation() {
   // シミュレーション用の評価データ（ローカル）
   const [simulationEvaluations, setSimulationEvaluations] = useState<Record<string, YearlyGrade>>({});
 
-  // 昇給率パターン
+  // 昇給率パターン（最大5つ）
   const [patterns, setPatterns] = useState<RaisePattern[]>([
-    { id: '1', name: 'パターン1', rates: { S: 10, A: 6, B: 4, C: 0 } },
-    { id: '2', name: 'パターン2', rates: { S: 10, A: 5, B: 3, C: 0 } },
-    { id: '3', name: 'パターン3', rates: { S: 8, A: 4, B: 2, C: 0 } },
+    { id: '1', name: 'パターン1', rates: { S: 10, A: 6, B: 4, C: 0 }, comment: '' },
+    { id: '2', name: 'パターン2', rates: { S: 10, A: 5, B: 3, C: 0 }, comment: '' },
+    { id: '3', name: 'パターン3', rates: { S: 8, A: 4, B: 2, C: 0 }, comment: '' },
   ]);
 
   // 標準給与合計（予算）を計算
@@ -52,6 +53,13 @@ export function BudgetSimulation() {
       return sum + rp.unitPrice * 12 * count;
     }, 0);
   }, [budget, members]);
+
+  // メンバーの標準給与年額を取得（ランク別単価ベース）
+  const getMemberStandardAnnualSalary = (rank: Rank): number => {
+    if (!budget) return 0;
+    const unitPrice = budget.rankUnitPrices.find(p => p.rank === rank);
+    return (unitPrice?.unitPrice || 0) * 12;
+  };
 
   // メンバーの現在給与を取得
   const getMemberSalary = (memberId: string, rank: Rank): number => {
@@ -107,13 +115,24 @@ export function BudgetSimulation() {
     });
   }, [members]);
 
-  // パターン追加
+  // パターン追加（最大5つまで）
   const addPattern = () => {
+    if (patterns.length >= 5) return;
     const newId = String(Date.now());
     setPatterns(prev => [
       ...prev,
-      { id: newId, name: `パターン${prev.length + 1}`, rates: { S: 10, A: 6, B: 4, C: 0 } }
+      { id: newId, name: `パターン${prev.length + 1}`, rates: { S: 10, A: 6, B: 4, C: 0 }, comment: '' }
     ]);
+  };
+
+  // パターンのコメントを更新
+  const updatePatternComment = (patternId: string, comment: string) => {
+    setPatterns(prev => prev.map(p => {
+      if (p.id === patternId) {
+        return { ...p, comment };
+      }
+      return p;
+    }));
   };
 
   // パターン削除
@@ -214,7 +233,7 @@ export function BudgetSimulation() {
           <div className="sim-summary-value">{members.length}名</div>
         </div>
         <div className="sim-summary-card">
-          <div className="sim-summary-label">標準給与予算（年間）</div>
+          <div className="sim-summary-label">FY{String(currentYear).slice(2)}標準給与年額（予算）</div>
           <div className="sim-summary-value">{standardSalaryTotal.toLocaleString()}万円</div>
         </div>
         <div className="sim-summary-card evaluation-counts">
@@ -236,9 +255,9 @@ export function BudgetSimulation() {
             <Calculator size={18} />
             昇給率パターン設定
           </h3>
-          <button className="btn-add-pattern" onClick={addPattern}>
+          <button className="btn-add-pattern" onClick={addPattern} disabled={patterns.length >= 5}>
             <Plus size={16} />
-            パターン追加
+            パターン追加 ({patterns.length}/5)
           </button>
         </div>
         <div className="pattern-settings">
@@ -250,6 +269,7 @@ export function BudgetSimulation() {
                 <th style={{ color: YearlyGradeColors['A'] }}>A評価 (%)</th>
                 <th style={{ color: YearlyGradeColors['B'] }}>B評価 (%)</th>
                 <th style={{ color: YearlyGradeColors['C'] }}>C評価 (%)</th>
+                <th>コメント</th>
                 <th></th>
               </tr>
             </thead>
@@ -277,6 +297,15 @@ export function BudgetSimulation() {
                       />
                     </td>
                   ))}
+                  <td>
+                    <input
+                      type="text"
+                      className="pattern-comment-input"
+                      value={pattern.comment}
+                      onChange={(e) => updatePatternComment(pattern.id, e.target.value)}
+                      placeholder="メモ..."
+                    />
+                  </td>
                   <td>
                     <button
                       className="btn-remove-pattern"
@@ -352,6 +381,7 @@ export function BudgetSimulation() {
                 <th>ランク</th>
                 <th>現在給与</th>
                 <th>年度評価</th>
+                <th>FY{String(currentYear + 1).slice(2)}標準給与年額</th>
                 <th>昇給率</th>
                 <th>翌年給与</th>
                 <th>年間増加額</th>
@@ -407,6 +437,9 @@ export function BudgetSimulation() {
                         <option value="C">C</option>
                       </select>
                     </td>
+                    <td className="amount-cell">
+                      {getMemberStandardAnnualSalary(result.member.rank).toLocaleString()}万円
+                    </td>
                     <td className="rate-cell">
                       <span className="raise-rate">{result.raiseRate}%</span>
                     </td>
@@ -426,7 +459,11 @@ export function BudgetSimulation() {
                 <td className="amount-cell">
                   {simulationResults[0]?.totalCurrentSalary.toLocaleString()}万円
                 </td>
-                <td colSpan={2}></td>
+                <td></td>
+                <td className="amount-cell">
+                  {standardSalaryTotal.toLocaleString()}万円
+                </td>
+                <td></td>
                 <td className="amount-cell next-year">
                   {simulationResults[0]?.totalNextYearSalary.toLocaleString()}万円
                 </td>
