@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import type { Member, Team, YearData } from '../types';
+import type { Member, Team, YearData, BudgetData, MemberSalary, NewHire, RankUnitPrice } from '../types';
+import { DefaultRankUnitPrices } from '../types';
 import { initialYearData } from '../data/initialData';
 
 interface AppContextType {
@@ -9,6 +10,7 @@ interface AppContextType {
   years: number[];
   members: Member[];
   teams: Team[];
+  budget: BudgetData | null;
   updateMember: (member: Member) => void;
   addMember: (member: Omit<Member, 'id'>) => void;
   deleteMember: (id: string) => void;
@@ -17,6 +19,13 @@ interface AppContextType {
   deleteTeam: (id: string) => void;
   addYear: (year: number) => void;
   copyYearData: (fromYear: number, toYear: number) => void;
+  // 予算管理
+  updateRankUnitPrices: (prices: RankUnitPrice[]) => void;
+  updateMemberSalary: (salary: MemberSalary) => void;
+  addNewHire: (hire: Omit<NewHire, 'id'>) => void;
+  updateNewHire: (hire: NewHire) => void;
+  deleteNewHire: (id: string) => void;
+  initializeBudget: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -58,6 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const currentData = allData.find((d) => d.year === currentYear) || initialYearData;
   const members = currentData.members;
   const teams = currentData.teams;
+  const budget = currentData.budget || null;
 
   const updateYearData = useCallback(
     (updater: (data: YearData) => YearData) => {
@@ -148,6 +158,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         year: toYear,
         members: sourceData.members.map((m) => ({ ...m })),
         teams: sourceData.teams.map((t) => ({ ...t })),
+        budget: sourceData.budget
+          ? {
+              ...sourceData.budget,
+              year: toYear,
+              memberSalaries: sourceData.budget.memberSalaries.map((s) => ({ ...s })),
+              newHires: sourceData.budget.newHires.map((h) => ({ ...h })),
+              rankUnitPrices: sourceData.budget.rankUnitPrices.map((p) => ({ ...p })),
+            }
+          : undefined,
       };
 
       const existingIndex = prev.findIndex((d) => d.year === toYear);
@@ -159,6 +178,117 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentYear(toYear);
   }, []);
 
+  // 予算管理機能
+  const initializeBudget = useCallback(() => {
+    updateYearData((data) => {
+      if (data.budget) return data;
+      return {
+        ...data,
+        budget: {
+          year: currentYear,
+          rankUnitPrices: [...DefaultRankUnitPrices],
+          memberSalaries: data.members.map((m) => ({
+            memberId: m.id,
+            annualSalary: null,
+            monthlySalaries: {},
+          })),
+          newHires: [],
+        },
+      };
+    });
+  }, [updateYearData, currentYear]);
+
+  const updateRankUnitPrices = useCallback(
+    (prices: RankUnitPrice[]) => {
+      updateYearData((data) => ({
+        ...data,
+        budget: data.budget
+          ? { ...data.budget, rankUnitPrices: prices }
+          : {
+              year: currentYear,
+              rankUnitPrices: prices,
+              memberSalaries: [],
+              newHires: [],
+            },
+      }));
+    },
+    [updateYearData, currentYear]
+  );
+
+  const updateMemberSalary = useCallback(
+    (salary: MemberSalary) => {
+      updateYearData((data) => {
+        if (!data.budget) return data;
+        const existingIndex = data.budget.memberSalaries.findIndex(
+          (s) => s.memberId === salary.memberId
+        );
+        let newSalaries: MemberSalary[];
+        if (existingIndex >= 0) {
+          newSalaries = data.budget.memberSalaries.map((s, i) =>
+            i === existingIndex ? salary : s
+          );
+        } else {
+          newSalaries = [...data.budget.memberSalaries, salary];
+        }
+        return {
+          ...data,
+          budget: { ...data.budget, memberSalaries: newSalaries },
+        };
+      });
+    },
+    [updateYearData]
+  );
+
+  const addNewHire = useCallback(
+    (hire: Omit<NewHire, 'id'>) => {
+      const id = `hire-${Date.now()}`;
+      updateYearData((data) => ({
+        ...data,
+        budget: data.budget
+          ? { ...data.budget, newHires: [...data.budget.newHires, { ...hire, id }] }
+          : {
+              year: currentYear,
+              rankUnitPrices: [...DefaultRankUnitPrices],
+              memberSalaries: [],
+              newHires: [{ ...hire, id }],
+            },
+      }));
+    },
+    [updateYearData, currentYear]
+  );
+
+  const updateNewHire = useCallback(
+    (hire: NewHire) => {
+      updateYearData((data) => {
+        if (!data.budget) return data;
+        return {
+          ...data,
+          budget: {
+            ...data.budget,
+            newHires: data.budget.newHires.map((h) => (h.id === hire.id ? hire : h)),
+          },
+        };
+      });
+    },
+    [updateYearData]
+  );
+
+  const deleteNewHire = useCallback(
+    (id: string) => {
+      updateYearData((data) => {
+        if (!data.budget) return data;
+        return {
+          ...data,
+          budget: {
+            ...data.budget,
+            newHires: data.budget.newHires.filter((h) => h.id !== id),
+          },
+        };
+      });
+    },
+    [updateYearData]
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -167,6 +297,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         years,
         members,
         teams,
+        budget,
         updateMember,
         addMember,
         deleteMember,
@@ -175,6 +306,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteTeam,
         addYear,
         copyYearData,
+        updateRankUnitPrices,
+        updateMemberSalary,
+        addNewHire,
+        updateNewHire,
+        deleteNewHire,
+        initializeBudget,
       }}
     >
       {children}

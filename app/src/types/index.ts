@@ -39,6 +39,7 @@ export interface YearData {
   year: number;
   members: Member[];
   teams: Team[];
+  budget?: BudgetData;
 }
 
 export const RankLabels: Record<Rank, string> = {
@@ -95,3 +96,45 @@ export const TeamColors = [
   '#06B6D4',
   '#84CC16',
 ];
+
+// 予算管理関連の型定義
+export interface MonthlySalary {
+  [month: number]: number | null; // 1-12月の給与（万円）
+}
+
+export interface MemberSalary {
+  memberId: string;
+  annualSalary: number | null; // 年収（万円）
+  monthlySalaries: MonthlySalary; // 月別給与
+}
+
+export interface NewHire {
+  id: string;
+  name: string;
+  rank: Rank;
+  entryMonth: number; // 入社月 (1-12)
+  annualSalary: number; // 年収（万円）
+  agentFeeRate: number; // エージェント費用率（%）デフォルト35
+  agentFeeOverride: number | null; // 手動入力されたエージェント費用（万円）
+}
+
+export interface RankUnitPrice {
+  rank: Rank;
+  unitPrice: number; // 標準単価（万円/月）
+}
+
+export interface BudgetData {
+  year: number;
+  rankUnitPrices: RankUnitPrice[];
+  memberSalaries: MemberSalary[];
+  newHires: NewHire[];
+}
+
+export const DefaultRankUnitPrices: RankUnitPrice[] = [
+  { rank: 'CONS', unitPrice: 80 },
+  { rank: 'Scon', unitPrice: 100 },
+  { rank: 'MGR', unitPrice: 130 },
+  { rank: 'SMGR', unitPrice: 160 },
+];
+
+export const DefaultAgentFeeRate = 35; // デフォルトエージェント費用率 35%

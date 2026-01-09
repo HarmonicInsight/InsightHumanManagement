@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Evaluation } from './pages/Evaluation';
 import { SkillMap } from './pages/SkillMap';
 import { Organization } from './pages/Organization';
+import { Budget } from './pages/Budget';
 import './index.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
             <Route path="/evaluation" element={<Evaluation />} />
             <Route path="/skillmap" element={<SkillMap />} />
             <Route path="/organization" element={<Organization />} />
+            <Route path="/budget" element={<Budget />} />
           </Routes>
         </div>
       </Router>
