@@ -250,6 +250,32 @@
   }
 }
 
+/* Assign Section Divider */
+.assign-section-divider {
+  margin: 32px 0 20px;
+  position: relative;
+}
+
+.assign-section-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gray-300) 10%, var(--gray-300) 90%, transparent);
+}
+
+.assign-section-title {
+  position: relative;
+  display: inline-block;
+  background: var(--gray-50);
+  padding: 0 16px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-700);
+}
+
 /* Legacy styles cleanup */
 .empty-state {
   text-align: center;

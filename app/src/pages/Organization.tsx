@@ -31,8 +31,9 @@ export function Organization() {
     const member = members.find((m) => m.id === memberId);
     if (!member) return;
 
-    if (destination.droppableId === 'unassigned') {
-      updateMember({ ...member, teamId: null });
+    if (destination.droppableId.startsWith('unassigned-')) {
+      const targetRank = destination.droppableId.slice('unassigned-'.length) as Rank;
+      updateMember({ ...member, teamId: null, rank: targetRank });
     } else if (destination.droppableId.startsWith('team-')) {
       const withoutPrefix = destination.droppableId.slice(5);
       const lastHyphenIndex = withoutPrefix.lastIndexOf('-');
@@ -104,7 +105,7 @@ export function Organization() {
                   <span className="rank-label">{RankLabels[rank]}</span>
                   <span className="rank-row-count">{rankMembers.length}</span>
                 </div>
-                <Droppable droppableId={teamId ? `team-${teamId}-${rank}` : 'unassigned'}>
+                <Droppable droppableId={teamId ? `team-${teamId}-${rank}` : `unassigned-${rank}`}>
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
@@ -201,6 +202,12 @@ export function Organization() {
             </table>
           </div>
         ))}
+      </div>
+
+      {/* アサイン管理セクション */}
+      <div className="assign-section-divider">
+        <div className="assign-section-line" />
+        <h2 className="assign-section-title">アサイン管理</h2>
       </div>
 
       {/* チーム構成 - 4列レイアウト */}
