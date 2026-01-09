@@ -40,6 +40,13 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const STORAGE_KEY = 'insight-hrm-data';
 const YEARLY_EVAL_KEY = 'insight-hrm-yearly-eval';
 
+// ユニークID生成用カウンター
+let idCounter = 0;
+const generateUniqueId = (prefix: string) => {
+  idCounter++;
+  return `${prefix}-${Date.now()}-${idCounter}-${Math.random().toString(36).slice(2, 7)}`;
+};
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [yearlyEvaluations, setYearlyEvaluations] = useState<MemberYearlyEvaluation[]>(() => {
     const saved = localStorage.getItem(YEARLY_EVAL_KEY);
@@ -114,7 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addMember = useCallback(
     (member: Omit<Member, 'id'>) => {
-      const id = `member-${Date.now()}`;
+      const id = generateUniqueId('member');
       updateYearData((data) => ({
         ...data,
         members: [...data.members, { ...member, id }],
@@ -135,7 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addTeam = useCallback(
     (team: Omit<Team, 'id'>) => {
-      const id = `team-${Date.now()}`;
+      const id = generateUniqueId('team');
       updateYearData((data) => ({
         ...data,
         teams: [...data.teams, { ...team, id }],
@@ -265,7 +272,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addNewHire = useCallback(
     (hire: Omit<NewHire, 'id'>) => {
-      const id = `hire-${Date.now()}`;
+      const id = generateUniqueId('hire');
       updateYearData((data) => ({
         ...data,
         budget: data.budget
