@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Users, BarChart3, Network, Home, Settings } from 'lucide-react';
+import { Users, BarChart3, Network, Home, Settings, Wallet } from 'lucide-react';
 import './Sidebar.css';
 
 export function Sidebar() {
@@ -31,6 +31,11 @@ export function Sidebar() {
         <NavLink to="/organization" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <Network size={20} />
           <span>Organization</span>
+        </NavLink>
+
+        <NavLink to="/budget" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Wallet size={20} />
+          <span>Budget</span>
         </NavLink>
       </nav>
 
