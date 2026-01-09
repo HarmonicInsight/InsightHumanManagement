@@ -381,7 +381,7 @@ export function BudgetSimulation() {
                 <th>ランク</th>
                 <th>現在給与</th>
                 <th>年度評価</th>
-                <th>FY{String(currentYear + 1).slice(2)}標準給与年額</th>
+                <th>FY{String(currentYear + 1).slice(2)}標準給与年額（予算）</th>
                 <th>昇給率</th>
                 <th>翌年給与</th>
                 <th>年間増加額</th>
