@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
-import { Plus, Edit2, Trash2, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, GripVertical, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors, TeamColors } from '../types';
@@ -75,6 +75,16 @@ export function Organization() {
     }
   };
 
+  const handleResetAllAssignments = () => {
+    if (confirm('すべてのメンバーを未所属に戻しますか？')) {
+      members.forEach((member) => {
+        if (member.teamId) {
+          updateMember({ ...member, teamId: null });
+        }
+      });
+    }
+  };
+
   const openEditTeam = (team: Team) => {
     setEditingTeam(team);
     setTeamForm({ name: team.name, leaderId: team.leaderId || '', color: team.color });
@@ -87,7 +97,17 @@ export function Organization() {
           <h1 className="page-title">組織体制</h1>
           <p className="page-subtitle">ドラッグ&ドロップでメンバーをチームに配置</p>
         </div>
-        <YearSelector />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            className="btn-secondary"
+            onClick={handleResetAllAssignments}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <RotateCcw size={16} />
+            全員を未所属に
+          </button>
+          <YearSelector />
+        </div>
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>

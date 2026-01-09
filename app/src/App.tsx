@@ -3,7 +3,6 @@ import { AppProvider } from './context/AppContext';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { EmployeeMaster } from './pages/EmployeeMaster';
-import { Evaluation } from './pages/Evaluation';
 import { YearlyEvaluation } from './pages/YearlyEvaluation';
 import { SkillMap } from './pages/SkillMap';
 import { Organization } from './pages/Organization';
@@ -19,7 +18,6 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/employees" element={<EmployeeMaster />} />
-            <Route path="/evaluation" element={<Evaluation />} />
             <Route path="/yearly-evaluation" element={<YearlyEvaluation />} />
             <Route path="/skillmap" element={<SkillMap />} />
             <Route path="/organization" element={<Organization />} />
