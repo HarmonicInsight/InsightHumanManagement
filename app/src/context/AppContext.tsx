@@ -31,6 +31,8 @@ interface AppContextType {
   updateRankUnitPricesByYear: (year: number, prices: RankUnitPrice[]) => void;
   // 年度評価
   updateYearlyEvaluation: (memberId: string, year: number, grade: YearlyGrade) => void;
+  // データクリーンアップ
+  cleanupDuplicateMembers: () => number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -75,6 +77,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     return 2024;
   });
+
+  // 初期ロード時に重複メンバーをクリーンアップ
+  useEffect(() => {
+    setAllData((prev) => {
+      let hasChanges = false;
+      const cleaned = prev.map((yearData) => {
+        const seenIds = new Set<string>();
+        const uniqueMembers = yearData.members.filter((member) => {
+          if (seenIds.has(member.id)) {
+            hasChanges = true;
+            return false;
+          }
+          seenIds.add(member.id);
+          return true;
+        });
+        return hasChanges ? { ...yearData, members: uniqueMembers } : yearData;
+      });
+      return hasChanges ? cleaned : prev;
+    });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
@@ -329,6 +351,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  // 重複メンバーを削除する
+  const cleanupDuplicateMembers = useCallback(() => {
+    let totalRemoved = 0;
+    setAllData((prev) =>
+      prev.map((yearData) => {
+        const seenIds = new Set<string>();
+        const uniqueMembers = yearData.members.filter((member) => {
+          if (seenIds.has(member.id)) {
+            totalRemoved++;
+            return false;
+          }
+          seenIds.add(member.id);
+          return true;
+        });
+        return { ...yearData, members: uniqueMembers };
+      })
+    );
+    return totalRemoved;
+  }, []);
+
   const getBudgetByYear = useCallback(
     (year: number): BudgetData | null => {
       const yearData = allData.find((d) => d.year === year);
@@ -386,6 +428,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getBudgetByYear,
         updateRankUnitPricesByYear,
         updateYearlyEvaluation,
+        cleanupDuplicateMembers,
       }}
     >
       {children}
