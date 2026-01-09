@@ -66,7 +66,7 @@ const emptySkills: Skills = {
 };
 
 export function EmployeeMaster() {
-  const { members, addMember, updateMember, deleteMember, currentYear } = useApp();
+  const { members, teams, addMember, updateMember, deleteMember, currentYear } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | 'all'>('all');
   const [rankFilter, setRankFilter] = useState<Rank | 'all'>('all');
@@ -238,12 +238,13 @@ export function EmployeeMaster() {
         jsonData.forEach((row, index) => {
           const rowNum = index + 2; // ヘッダー行を考慮
 
-          // 新フォーマット: Fullname_JP を主な名前として使用
+          // 新フォーマット: Fullname_VN を主な名前として使用
+          const nameVn = String(row['Fullname_VN'] || '').trim();
           const nameJp = String(row['Fullname_JP'] || row['氏名'] || row['名前'] || row['社員名'] || '').trim();
           const nameEn = String(row['Fullname'] || row['英語名'] || '').trim();
 
-          // 名前は日本語名を優先
-          const name = nameJp || nameEn;
+          // 名前はベトナム語名を優先
+          const name = nameVn || nameJp || nameEn;
 
           if (!name) {
             errors.push(`行${rowNum}: 氏名が空です`);
@@ -304,6 +305,16 @@ export function EmployeeMaster() {
           const email = String(row['メール'] || row['メールアドレス'] || row['email'] || '').trim();
           const department = String(row['部署'] || row['所属'] || '').trim();
 
+          // チーム紐づけ（Team列からチーム名を取得してマッチング）
+          const teamName = String(row['Team'] || row['チーム'] || '').trim();
+          let teamId: string | null = null;
+          if (teamName) {
+            const matchedTeam = teams.find(t => t.name === teamName || t.name.includes(teamName) || teamName.includes(t.name));
+            if (matchedTeam) {
+              teamId = matchedTeam.id;
+            }
+          }
+
           // 既存社員との重複チェック（社員コードまたは名前で判定）
           const existingMember = employeeCode
             ? members.find((m) => m.employeeCode === employeeCode)
@@ -316,6 +327,7 @@ export function EmployeeMaster() {
               name,
               rank,
               status,
+              teamId: teamId ?? existingMember.teamId,
               employeeCode: employeeCode || existingMember.employeeCode,
               account: account || existingMember.account,
               nameJp: nameJp || existingMember.nameJp,
@@ -332,7 +344,7 @@ export function EmployeeMaster() {
             addMember({
               name,
               rank,
-              teamId: null,
+              teamId,
               evaluation: emptyEvaluation,
               skills: emptySkills,
               status,
@@ -369,18 +381,24 @@ export function EmployeeMaster() {
 
   // エクスポート処理 (新フォーマット対応)
   const handleExport = () => {
-    const exportData = members.map((member, index) => ({
-      'No': index + 1,
-      'EmployeeCode': member.employeeCode || '',
-      'Fullname': member.nameEn || member.name || '',
-      'Account': member.account || '',
-      'Fullname_JP': member.nameJp || member.name || '',
-      'Fullname_VN': '', // 未対応
-      'JobRank': REVERSE_JOBRANK_MAP[member.rank] || member.rank,
-      'Sex': member.gender || '',
-      'Birthday': member.birthYear || '',
-      'FJPJoinedDate': member.joinDate || '',
-    }));
+    const exportData = members.map((member, index) => {
+      // チーム名を取得
+      const team = teams.find(t => t.id === member.teamId);
+      const teamName = team?.name || '';
+      return {
+        'No': index + 1,
+        'EmployeeCode': member.employeeCode || '',
+        'Fullname': member.nameEn || '',
+        'Account': member.account || '',
+        'Fullname_JP': member.nameJp || '',
+        'Fullname_VN': member.name || '',
+        'JobRank': REVERSE_JOBRANK_MAP[member.rank] || member.rank,
+        'Sex': member.gender || '',
+        'Birthday': member.birthYear || '',
+        'FJPJoinedDate': member.joinDate || '',
+        'Team': teamName,
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
 
@@ -391,11 +409,12 @@ export function EmployeeMaster() {
       { wch: 25 }, // Fullname
       { wch: 15 }, // Account
       { wch: 15 }, // Fullname_JP
-      { wch: 15 }, // Fullname_VN
+      { wch: 20 }, // Fullname_VN
       { wch: 10 }, // JobRank
       { wch: 5 },  // Sex
       { wch: 8 },  // Birthday
       { wch: 12 }, // FJPJoinedDate
+      { wch: 15 }, // Team
     ];
 
     const workbook = XLSX.utils.book_new();
