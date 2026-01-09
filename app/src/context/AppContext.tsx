@@ -19,6 +19,7 @@ interface AppContextType {
   updateTeam: (team: Team) => void;
   deleteTeam: (id: string) => void;
   addYear: (year: number) => void;
+  deleteYear: (year: number) => void;
   copyYearData: (fromYear: number, toYear: number) => void;
   // 予算管理
   updateRankUnitPrices: (prices: RankUnitPrice[]) => void;
@@ -179,6 +180,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     setCurrentYear(year);
   }, []);
+
+  const deleteYear = useCallback((year: number) => {
+    setAllData((prev) => {
+      const filtered = prev.filter((d) => d.year !== year);
+      if (filtered.length === 0) {
+        // 最低1年は残す
+        return prev;
+      }
+      return filtered;
+    });
+    // 削除した年が現在の年なら、別の年に切り替え
+    setCurrentYear((curr) => {
+      if (curr === year) {
+        const remaining = allData.filter((d) => d.year !== year);
+        return remaining.length > 0 ? remaining[remaining.length - 1].year : curr;
+      }
+      return curr;
+    });
+  }, [allData]);
 
   const copyYearData = useCallback((fromYear: number, toYear: number) => {
     setAllData((prev) => {
@@ -405,6 +425,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateTeam,
         deleteTeam,
         addYear,
+        deleteYear,
         copyYearData,
         updateRankUnitPrices,
         updateMemberSalary,

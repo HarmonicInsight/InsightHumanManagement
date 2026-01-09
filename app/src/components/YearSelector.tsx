@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Calendar, Plus, Copy } from 'lucide-react';
+import { Calendar, Plus, Copy, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import './YearSelector.css';
 
 export function YearSelector() {
-  const { currentYear, setCurrentYear, years, addYear, copyYearData } = useApp();
+  const { currentYear, setCurrentYear, years, addYear, deleteYear, copyYearData } = useApp();
   const [showModal, setShowModal] = useState(false);
   const [newYear, setNewYear] = useState(new Date().getFullYear());
   const [copyFrom, setCopyFrom] = useState<number | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
 
   const handleAddYear = () => {
     if (copyFrom) {
@@ -17,6 +18,11 @@ export function YearSelector() {
     }
     setShowModal(false);
     setCopyFrom(null);
+  };
+
+  const handleDeleteYear = (year: number) => {
+    deleteYear(year);
+    setShowDeleteConfirm(null);
   };
 
   return (
@@ -88,6 +94,40 @@ export function YearSelector() {
                 追加
               </button>
             </div>
+
+            {/* 年度削除セクション */}
+            {years.length > 1 && (
+              <div className="year-delete-section">
+                <div className="section-divider" />
+                <label>年度を削除</label>
+                <div className="year-delete-list">
+                  {years.map((year) => (
+                    <div key={year} className="year-delete-item">
+                      <span>{year}年度</span>
+                      {showDeleteConfirm === year ? (
+                        <div className="delete-confirm">
+                          <span>削除しますか？</span>
+                          <button className="btn-danger-small" onClick={() => handleDeleteYear(year)}>
+                            削除
+                          </button>
+                          <button className="btn-cancel-small" onClick={() => setShowDeleteConfirm(null)}>
+                            取消
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className="btn-delete-year"
+                          onClick={() => setShowDeleteConfirm(year)}
+                          disabled={years.length <= 1}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
