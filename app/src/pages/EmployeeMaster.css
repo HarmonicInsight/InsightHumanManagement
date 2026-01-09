@@ -140,8 +140,34 @@
   gap: 10px;
 }
 
+.member-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .member-name {
   font-weight: 500;
+}
+
+.member-name-en {
+  font-size: 11px;
+  color: var(--gray-500);
+}
+
+.code-cell {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+  color: var(--gray-600);
+}
+
+.account-cell {
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.center-cell {
+  text-align: center;
 }
 
 /* Import result notification */

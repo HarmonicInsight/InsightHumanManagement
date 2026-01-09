@@ -4,6 +4,8 @@ export type Grade = 'S' | 'A' | 'B' | 'C' | null;
 
 export type EmployeeStatus = 'active' | 'inactive' | 'planned';
 
+export type Gender = 'M' | 'F' | null;
+
 export interface Member {
   id: string;
   name: string;
@@ -12,6 +14,12 @@ export interface Member {
   evaluation: Evaluation;
   skills: Skills;
   // 社員マスタ追加フィールド
+  employeeCode?: string; // 社員コード
+  account?: string; // アカウント
+  nameJp?: string; // 日本語名 (Fullname_JP)
+  nameEn?: string; // 英語名 (Fullname)
+  gender?: Gender; // 性別 (M/F)
+  birthYear?: number; // 生年
   joinDate?: string; // 入社日 YYYY-MM-DD
   leaveDate?: string; // 退社日 YYYY-MM-DD (optional)
   status?: EmployeeStatus; // 在籍状況
