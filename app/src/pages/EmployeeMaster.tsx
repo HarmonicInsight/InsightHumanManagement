@@ -19,24 +19,24 @@ const JOBRANK_MAP: Record<string, Rank> = {
   // ダイレクター
   'ダイレクター': 'DIR',
   'DIR': 'DIR',
+  'BCON07': 'DIR',
   'BCON08': 'DIR',
   'BCON09': 'DIR',
   // シニアマネージャー
   'シニアマネージャー': 'SMGR',
   'SMGR': 'SMGR',
-  'BCON07': 'SMGR',
+  'BCON06': 'SMGR',
   // マネージャー
   'マネージャー': 'MGR',
   'MGR': 'MGR',
-  'BCON06': 'MGR',
+  'BCON05': 'MGR',
   // シニアコンサルタント
   'シニアコンサルタント': 'Scon',
   'Scon': 'Scon',
-  'BCON05': 'Scon',
+  'BCON04': 'Scon',
   // コンサルタント
   'コンサルタント': 'CONS',
   'CONS': 'CONS',
-  'BCON04': 'CONS',
   'BCON03': 'CONS',
   'BCON02': 'CONS',
   'BCON01': 'CONS',
@@ -44,11 +44,11 @@ const JOBRANK_MAP: Record<string, Rank> = {
 
 // BCONコードへの逆変換
 const REVERSE_JOBRANK_MAP: Record<Rank, string> = {
-  'DIR': 'BCON08',
-  'SMGR': 'BCON07',
-  'MGR': 'BCON06',
-  'Scon': 'BCON05',
-  'CONS': 'BCON04',
+  'DIR': 'BCON07',
+  'SMGR': 'BCON06',
+  'MGR': 'BCON05',
+  'Scon': 'BCON04',
+  'CONS': 'BCON03',
 };
 
 const STATUS_MAP: Record<string, EmployeeStatus> = {
@@ -593,18 +593,18 @@ export function EmployeeMaster() {
           </div>
         </div>
 
-        <table className="table">
+        <table className="table" style={{ tableLayout: 'fixed' }}>
           <thead>
             <tr>
-              <th style={{ width: 90 }}>社員コード</th>
-              <th>氏名</th>
+              <th style={{ width: 85 }}>社員コード</th>
+              <th style={{ width: 160 }}>氏名</th>
               <th style={{ width: 100 }}>Account</th>
-              <th style={{ width: 130 }}>ランク</th>
-              <th style={{ width: 50 }}>性別</th>
-              <th style={{ width: 60 }}>生年</th>
-              <th style={{ width: 100 }}>入社日</th>
+              <th style={{ width: 110 }}>ランク</th>
+              <th style={{ width: 45 }}>性別</th>
+              <th style={{ width: 55 }}>生年</th>
+              <th style={{ width: 95 }}>入社日</th>
               <th style={{ width: 80 }}>ステータス</th>
-              <th style={{ width: 70 }}>操作</th>
+              <th style={{ width: 65 }}>操作</th>
             </tr>
           </thead>
           <tbody>
