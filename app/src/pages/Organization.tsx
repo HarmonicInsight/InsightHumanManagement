@@ -47,8 +47,11 @@ export function Organization() {
     if (destination.droppableId === 'unassigned') {
       updateMember({ ...member, teamId: null });
     } else if (destination.droppableId.startsWith('team-')) {
-      const parts = destination.droppableId.split('-');
-      const teamId = parts[1];
+      // Format: team-{teamId}-{rank}
+      // teamId can contain hyphens (e.g., team-1234567890), so use lastIndexOf
+      const withoutPrefix = destination.droppableId.slice(5); // Remove "team-"
+      const lastHyphenIndex = withoutPrefix.lastIndexOf('-');
+      const teamId = withoutPrefix.slice(0, lastHyphenIndex);
       updateMember({ ...member, teamId });
     }
   };
