@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
-import { Plus, Edit2, Trash2, GripVertical, ChevronDown, ChevronRight, RotateCcw, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, GripVertical, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors, TeamColors } from '../types';
@@ -12,7 +12,7 @@ import './Organization.css';
 const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
 
 export function Organization() {
-  const { members, teams, addTeam, updateTeam, deleteTeam, updateMember, currentYear } = useApp();
+  const { members, teams, addTeam, updateTeam, deleteTeam, updateMember } = useApp();
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: '', leaderId: '', color: TeamColors[0] });
@@ -22,7 +22,6 @@ export function Organization() {
 
   // チーム別メンバー数を取得
   const getTeamMemberCount = (teamId: string) => members.filter((m) => m.teamId === teamId).length;
-  const maxTeamCount = Math.max(...teams.map((t) => getTeamMemberCount(t.id)), unassignedMembers.length, 1);
 
   const getTeamMembersByRank = (teamId: string, rank: Rank) =>
     members.filter((m) => m.teamId === teamId && m.rank === rank);
@@ -117,45 +116,52 @@ export function Organization() {
         </div>
       </div>
 
-      {/* チーム別人数サマリー */}
-      <div className="org-summary-card">
-        <div className="org-summary-header">
-          <h3>FY{String(currentYear).slice(2)}</h3>
-          <div className="org-summary-total">
-            <Users size={18} />
-            <span>{members.length}名</span>
+      {/* ランク別人数サマリー */}
+      <div className="org-summary-tables">
+        {/* 全体 */}
+        <div className="org-rank-table">
+          <div className="org-rank-table-header">全体</div>
+          <table>
+            <tbody>
+              {RANKS.map((rank) => {
+                const count = members.filter((m) => m.rank === rank).length;
+                return (
+                  <tr key={rank}>
+                    <td className="rank-name">{RankLabels[rank]}</td>
+                    <td className="rank-count">{count}</td>
+                  </tr>
+                );
+              })}
+              <tr className="total-row">
+                <td className="rank-name">合計</td>
+                <td className="rank-count">{members.length}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {/* チーム別 */}
+        {teams.map((team) => (
+          <div key={team.id} className="org-rank-table">
+            <div className="org-rank-table-header" style={{ borderBottomColor: team.color }}>{team.name}</div>
+            <table>
+              <tbody>
+                {RANKS.map((rank) => {
+                  const count = members.filter((m) => m.teamId === team.id && m.rank === rank).length;
+                  return (
+                    <tr key={rank}>
+                      <td className="rank-name">{RankLabels[rank]}</td>
+                      <td className="rank-count">{count}</td>
+                    </tr>
+                  );
+                })}
+                <tr className="total-row">
+                  <td className="rank-name">合計</td>
+                  <td className="rank-count">{getTeamMemberCount(team.id)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </div>
-        <div className="org-summary-bars">
-          {teams.map((team) => {
-            const count = getTeamMemberCount(team.id);
-            const percentage = (count / maxTeamCount) * 100;
-            return (
-              <div key={team.id} className="org-summary-row">
-                <div className="org-summary-label" style={{ color: team.color }}>{team.name}</div>
-                <div className="org-summary-bar-container">
-                  <div
-                    className="org-summary-bar"
-                    style={{ width: `${percentage}%`, background: team.color }}
-                  />
-                </div>
-                <div className="org-summary-count">{count}</div>
-              </div>
-            );
-          })}
-          {unassignedMembers.length > 0 && (
-            <div className="org-summary-row">
-              <div className="org-summary-label" style={{ color: '#9CA3AF' }}>未所属</div>
-              <div className="org-summary-bar-container">
-                <div
-                  className="org-summary-bar"
-                  style={{ width: `${(unassignedMembers.length / maxTeamCount) * 100}%`, background: '#9CA3AF' }}
-                />
-              </div>
-              <div className="org-summary-count">{unassignedMembers.length}</div>
-            </div>
-          )}
-        </div>
+        ))}
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>

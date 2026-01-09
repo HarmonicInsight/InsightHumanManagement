@@ -267,81 +267,67 @@
   font-size: 14px;
 }
 
-/* Organization Summary Card */
-.org-summary-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+/* Organization Rank Tables */
+.org-summary-tables {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 24px;
-  max-width: 400px;
 }
 
-.org-summary-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+.org-rank-table {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  min-width: 160px;
+}
+
+.org-rank-table-header {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+  background: var(--gray-50);
+  border-bottom: 3px solid var(--gray-300);
+}
+
+.org-rank-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.org-rank-table td {
+  padding: 8px 16px;
+  font-size: 13px;
   border-bottom: 1px solid var(--gray-100);
 }
 
-.org-summary-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--gray-800);
-}
-
-.org-summary-total {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.org-rank-table td.rank-name {
   color: var(--gray-600);
-  font-size: 14px;
-  font-weight: 600;
 }
 
-.org-summary-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.org-summary-row {
-  display: grid;
-  grid-template-columns: 80px 1fr 30px;
-  align-items: center;
-  gap: 12px;
-}
-
-.org-summary-label {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.org-summary-bar-container {
-  height: 24px;
-  background: var(--gray-100);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.org-summary-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-  min-width: 4px;
-}
-
-.org-summary-count {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gray-600);
+.org-rank-table td.rank-count {
   text-align: right;
+  font-weight: 500;
+  color: var(--gray-800);
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 0;
+  margin-left: 0;
+}
+
+.org-rank-table tr.total-row {
+  background: var(--gray-50);
+}
+
+.org-rank-table tr.total-row td {
+  font-weight: 600;
+  border-bottom: none;
+}
+
+.org-rank-table tr.total-row td.rank-count {
+  color: var(--primary-color);
 }
 
 @media (max-width: 900px) {
