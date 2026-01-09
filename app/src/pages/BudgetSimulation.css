@@ -1,0 +1,370 @@
+/* BudgetSimulation.css */
+
+/* Summary Cards */
+.sim-summary-cards {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.sim-summary-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 16px 20px;
+  min-width: 180px;
+}
+
+.sim-summary-card.evaluation-counts {
+  flex: 1;
+}
+
+.sim-summary-label {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-bottom: 4px;
+}
+
+.sim-summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+.eval-distribution {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.eval-count {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Pattern Settings */
+.pattern-settings {
+  padding: 16px;
+}
+
+.pattern-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pattern-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.pattern-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.pattern-name-input {
+  width: 120px;
+  padding: 6px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.pattern-name-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.rate-input {
+  width: 60px;
+  padding: 6px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.rate-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.btn-add-pattern {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add-pattern:hover {
+  background: var(--primary-hover);
+}
+
+.btn-remove-pattern {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  color: var(--gray-400);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove-pattern:hover:not(:disabled) {
+  background: #FEE2E2;
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+.btn-remove-pattern:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Comparison Table */
+.simulation-comparison {
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.comparison-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.comparison-table td {
+  padding: 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.comparison-table tr.within-budget {
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.comparison-table tr.over-budget {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.comparison-table .pattern-name {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.comparison-table .amount {
+  text-align: right;
+  font-weight: 500;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.comparison-table .amount.positive {
+  color: #10B981;
+}
+
+.comparison-table .amount.negative {
+  color: #EF4444;
+}
+
+.budget-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.budget-badge.ok {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.budget-badge.ng {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+/* Member Detail Table */
+.member-detail-table-container {
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.member-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.member-detail-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  border-bottom: 2px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+.member-detail-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+}
+
+.member-detail-table .member-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-detail-table .member-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.member-detail-table .rank-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.member-detail-table .amount-cell {
+  white-space: nowrap;
+}
+
+.member-detail-table .amount-cell.next-year {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.member-detail-table .amount-cell.positive {
+  color: #10B981;
+}
+
+.salary-input-sim {
+  width: 70px;
+  padding: 5px 8px;
+  border: 1px solid var(--gray-200);
+  border-radius: 5px;
+  font-size: 13px;
+  text-align: right;
+}
+
+.salary-input-sim:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.unit {
+  margin-left: 4px;
+  color: var(--gray-500);
+  font-size: 12px;
+}
+
+.eval-select {
+  padding: 5px 8px;
+  border: 1px solid var(--gray-200);
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 50px;
+}
+
+.eval-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.rate-cell {
+  text-align: center;
+}
+
+.raise-rate {
+  display: inline-block;
+  padding: 3px 10px;
+  background: var(--gray-100);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.member-detail-table tfoot .total-row {
+  background: var(--gray-50);
+}
+
+.member-detail-table tfoot .total-row td {
+  font-weight: 700;
+  border-bottom: none;
+  padding: 12px;
+}
+
+.member-detail-table tfoot .total-row .amount-cell {
+  font-size: 14px;
+}
+
+/* Card Header */
+.card-header .card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .sim-summary-cards {
+    flex-wrap: wrap;
+  }
+
+  .sim-summary-card {
+    flex: 1;
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .eval-distribution {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
