@@ -42,9 +42,18 @@ export function UnitPriceMaster() {
     const budgetData = getBudgetByYear(year);
     const currentPrices = budgetData?.rankUnitPrices || [...DefaultRankUnitPrices];
     const newPrice = Number(value) || 0;
-    const updated = currentPrices.map((p) =>
-      p.rank === rank ? { ...p, unitPrice: newPrice } : p
-    );
+
+    // ランクが存在するかチェック
+    const existingRank = currentPrices.find((p) => p.rank === rank);
+    let updated;
+    if (existingRank) {
+      updated = currentPrices.map((p) =>
+        p.rank === rank ? { ...p, unitPrice: newPrice } : p
+      );
+    } else {
+      // ランクが存在しない場合は追加
+      updated = [...currentPrices, { rank, unitPrice: newPrice }];
+    }
     updateRankUnitPricesByYear(year, updated);
   };
 
