@@ -157,6 +157,11 @@ body {
   font-weight: 500;
 }
 
+.badge-smgr {
+  background: #FCE7F3;
+  color: #DB2777;
+}
+
 .badge-mgr {
   background: #EDE9FE;
   color: #7C3AED;

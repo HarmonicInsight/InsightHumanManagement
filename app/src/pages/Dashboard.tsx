@@ -11,11 +11,14 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { members } from '../data/members';
+import { useApp } from '../context/AppContext';
+import { YearSelector } from '../components/YearSelector';
 import { RankLabels } from '../types';
 import type { Rank } from '../types';
 
 export function Dashboard() {
+  const { members } = useApp();
+
   const totalMembers = members.length;
   const evaluatedMembers = members.filter((m) => m.evaluation.grade !== null).length;
   const avgScore =
@@ -23,9 +26,10 @@ export function Dashboard() {
       evaluatedMembers || 0;
 
   const rankCounts: Record<Rank, number> = {
-    MGR: members.filter((m) => m.rank === 'MGR').length,
-    Scon: members.filter((m) => m.rank === 'Scon').length,
     CONS: members.filter((m) => m.rank === 'CONS').length,
+    Scon: members.filter((m) => m.rank === 'Scon').length,
+    MGR: members.filter((m) => m.rank === 'MGR').length,
+    SMGR: members.filter((m) => m.rank === 'SMGR').length,
   };
 
   const gradeData = [
@@ -36,10 +40,11 @@ export function Dashboard() {
   ];
 
   const rankData = [
+    { name: 'SMGR', count: rankCounts.SMGR, color: '#EC4899' },
     { name: 'MGR', count: rankCounts.MGR, color: '#8B5CF6' },
     { name: 'Scon', count: rankCounts.Scon, color: '#3B82F6' },
     { name: 'CONS', count: rankCounts.CONS, color: '#10B981' },
-  ];
+  ].filter((d) => d.count > 0);
 
   const topPerformers = members
     .filter((m) => m.evaluation.score !== null)
@@ -48,14 +53,17 @@ export function Dashboard() {
 
   return (
     <div className="main-content">
-      <div className="page-header">
-        <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">Team performance overview</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">チームパフォーマンス概要</p>
+        </div>
+        <YearSelector />
       </div>
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-label">Total Members</div>
+          <div className="stat-label">メンバー数</div>
           <div className="stat-value">{totalMembers}</div>
           <div className="stat-icon">
             <Users size={24} color="#3B82F6" />
@@ -63,7 +71,7 @@ export function Dashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Evaluated Members</div>
+          <div className="stat-label">評価済み</div>
           <div className="stat-value">{evaluatedMembers}</div>
           <div className="stat-icon">
             <UserCheck size={24} color="#10B981" />
@@ -71,7 +79,7 @@ export function Dashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Average Score</div>
+          <div className="stat-label">平均スコア</div>
           <div className="stat-value">{avgScore.toFixed(1)}</div>
           <div className="stat-icon">
             <TrendingUp size={24} color="#F59E0B" />
@@ -79,7 +87,7 @@ export function Dashboard() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Top Performers (S/A)</div>
+          <div className="stat-label">高評価者 (S/A)</div>
           <div className="stat-value">
             {members.filter((m) => m.evaluation.grade === 'S' || m.evaluation.grade === 'A').length}
           </div>
@@ -92,7 +100,7 @@ export function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Grade Distribution</h3>
+            <h3 className="card-title">グレード分布</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={gradeData}>
@@ -111,7 +119,7 @@ export function Dashboard() {
 
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Rank Distribution</h3>
+            <h3 className="card-title">ランク構成</h3>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -137,15 +145,15 @@ export function Dashboard() {
 
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">Top Performers</h3>
+          <h3 className="card-title">トップパフォーマー</h3>
         </div>
         <table className="table">
           <thead>
             <tr>
-              <th>Member</th>
-              <th>Rank</th>
-              <th>Grade</th>
-              <th>Summary</th>
+              <th>メンバー</th>
+              <th>ランク</th>
+              <th>グレード</th>
+              <th>総評</th>
             </tr>
           </thead>
           <tbody>
