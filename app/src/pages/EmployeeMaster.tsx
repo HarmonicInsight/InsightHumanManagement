@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors } from '../types';
-import type { Rank, Member, EmployeeStatus, Evaluation, Skills } from '../types';
+import type { Rank, Member, EmployeeStatus, Evaluation, Skills, Gender } from '../types';
 import './EmployeeMaster.css';
 
 const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
@@ -14,23 +14,29 @@ const STATUS_OPTIONS: { value: EmployeeStatus; label: string }[] = [
   { value: 'planned', label: '入社予定' },
 ];
 
-// JOBRANKの変換マップ
+// JOBRANKの変換マップ (BCON形式も対応)
 const JOBRANK_MAP: Record<string, Rank> = {
   'シニアマネージャー': 'SMGR',
   'SMGR': 'SMGR',
+  'BCON07': 'SMGR',
   'マネージャー': 'MGR',
   'MGR': 'MGR',
+  'BCON06': 'MGR',
   'シニアコンサルタント': 'Scon',
   'Scon': 'Scon',
+  'BCON05': 'Scon',
   'コンサルタント': 'CONS',
   'CONS': 'CONS',
+  'BCON04': 'CONS',
+  'BCON03': 'CONS',
 };
 
+// BCONコードへの逆変換
 const REVERSE_JOBRANK_MAP: Record<Rank, string> = {
-  'SMGR': 'シニアマネージャー',
-  'MGR': 'マネージャー',
-  'Scon': 'シニアコンサルタント',
-  'CONS': 'コンサルタント',
+  'SMGR': 'BCON07',
+  'MGR': 'BCON06',
+  'Scon': 'BCON05',
+  'CONS': 'BCON04',
 };
 
 const STATUS_MAP: Record<string, EmployeeStatus> = {
@@ -40,12 +46,6 @@ const STATUS_MAP: Record<string, EmployeeStatus> = {
   'active': 'active',
   'inactive': 'inactive',
   'planned': 'planned',
-};
-
-const REVERSE_STATUS_MAP: Record<EmployeeStatus, string> = {
-  'active': '在籍',
-  'inactive': '退職',
-  'planned': '入社予定',
 };
 
 const emptyEvaluation: Evaluation = {
@@ -78,6 +78,12 @@ export function EmployeeMaster() {
     name: '',
     rank: 'CONS',
     status: 'active',
+    employeeCode: '',
+    account: '',
+    nameJp: '',
+    nameEn: '',
+    gender: null,
+    birthYear: undefined,
     joinDate: '',
     leaveDate: '',
     email: '',
@@ -85,8 +91,14 @@ export function EmployeeMaster() {
   });
 
   const filteredMembers = members.filter((m) => {
-    const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (m.email?.toLowerCase().includes(searchTerm.toLowerCase()));
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch =
+      m.name.toLowerCase().includes(searchLower) ||
+      (m.nameJp?.toLowerCase().includes(searchLower)) ||
+      (m.nameEn?.toLowerCase().includes(searchLower)) ||
+      (m.employeeCode?.toLowerCase().includes(searchLower)) ||
+      (m.account?.toLowerCase().includes(searchLower)) ||
+      (m.email?.toLowerCase().includes(searchLower));
     const matchesStatus = statusFilter === 'all' || (m.status || 'active') === statusFilter;
     const matchesRank = rankFilter === 'all' || m.rank === rankFilter;
     return matchesSearch && matchesStatus && matchesRank;
@@ -104,6 +116,12 @@ export function EmployeeMaster() {
       name: '',
       rank: 'CONS',
       status: 'active',
+      employeeCode: '',
+      account: '',
+      nameJp: '',
+      nameEn: '',
+      gender: null,
+      birthYear: undefined,
       joinDate: '',
       leaveDate: '',
       email: '',
@@ -117,6 +135,12 @@ export function EmployeeMaster() {
       name: member.name,
       rank: member.rank,
       status: member.status || 'active',
+      employeeCode: member.employeeCode || '',
+      account: member.account || '',
+      nameJp: member.nameJp || '',
+      nameEn: member.nameEn || '',
+      gender: member.gender || null,
+      birthYear: member.birthYear,
       joinDate: member.joinDate || '',
       leaveDate: member.leaveDate || '',
       email: member.email || '',
@@ -132,6 +156,12 @@ export function EmployeeMaster() {
       name: '',
       rank: 'CONS',
       status: 'active',
+      employeeCode: '',
+      account: '',
+      nameJp: '',
+      nameEn: '',
+      gender: null,
+      birthYear: undefined,
       joinDate: '',
       leaveDate: '',
       email: '',
@@ -148,6 +178,12 @@ export function EmployeeMaster() {
         name: formData.name!,
         rank: formData.rank as Rank,
         status: formData.status as EmployeeStatus,
+        employeeCode: formData.employeeCode || undefined,
+        account: formData.account || undefined,
+        nameJp: formData.nameJp || undefined,
+        nameEn: formData.nameEn || undefined,
+        gender: formData.gender || undefined,
+        birthYear: formData.birthYear || undefined,
         joinDate: formData.joinDate || undefined,
         leaveDate: formData.leaveDate || undefined,
         email: formData.email || undefined,
@@ -161,6 +197,12 @@ export function EmployeeMaster() {
         evaluation: emptyEvaluation,
         skills: emptySkills,
         status: formData.status as EmployeeStatus,
+        employeeCode: formData.employeeCode || undefined,
+        account: formData.account || undefined,
+        nameJp: formData.nameJp || undefined,
+        nameEn: formData.nameEn || undefined,
+        gender: formData.gender || undefined,
+        birthYear: formData.birthYear || undefined,
         joinDate: formData.joinDate || undefined,
         leaveDate: formData.leaveDate || undefined,
         email: formData.email || undefined,
@@ -176,7 +218,7 @@ export function EmployeeMaster() {
     }
   };
 
-  // インポート処理
+  // インポート処理 (新Excelフォーマット対応)
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -195,26 +237,50 @@ export function EmployeeMaster() {
 
         jsonData.forEach((row, index) => {
           const rowNum = index + 2; // ヘッダー行を考慮
-          const name = String(row['氏名'] || row['名前'] || row['社員名'] || '').trim();
+
+          // 新フォーマット: Fullname_JP を主な名前として使用
+          const nameJp = String(row['Fullname_JP'] || row['氏名'] || row['名前'] || row['社員名'] || '').trim();
+          const nameEn = String(row['Fullname'] || row['英語名'] || '').trim();
+
+          // 名前は日本語名を優先
+          const name = nameJp || nameEn;
 
           if (!name) {
             errors.push(`行${rowNum}: 氏名が空です`);
             return;
           }
 
-          // JOBRANK変換
-          const jobrankRaw = String(row['JOBRANK'] || row['ランク'] || row['役職'] || 'CONS').trim();
+          // 社員コードとアカウント
+          const employeeCode = String(row['EmployeeCode'] || row['社員コード'] || '').trim();
+          const account = String(row['Account'] || row['アカウント'] || '').trim();
+
+          // JOBRANK変換 (BCON形式対応)
+          const jobrankRaw = String(row['JobRank'] || row['JOBRANK'] || row['ランク'] || row['役職'] || 'BCON04').trim();
           const rank = JOBRANK_MAP[jobrankRaw] || 'CONS';
+
+          // 性別
+          const sexRaw = String(row['Sex'] || row['性別'] || '').trim().toUpperCase();
+          const gender: Gender = sexRaw === 'M' ? 'M' : sexRaw === 'F' ? 'F' : null;
+
+          // 生年
+          const birthdayRaw = row['Birthday'] || row['生年'];
+          let birthYear: number | undefined;
+          if (birthdayRaw) {
+            const parsed = Number(birthdayRaw);
+            if (!isNaN(parsed) && parsed > 1900 && parsed < 2100) {
+              birthYear = parsed;
+            }
+          }
 
           // ステータス変換
           const statusRaw = String(row['ステータス'] || row['status'] || '在籍').trim();
           const status = STATUS_MAP[statusRaw] || 'active';
 
-          // 日付処理
+          // 日付処理 (FJPJoinedDate対応)
           let joinDate = '';
           let leaveDate = '';
 
-          const joinDateRaw = row['入社日'] || row['入社年月日'];
+          const joinDateRaw = row['FJPJoinedDate'] || row['入社日'] || row['入社年月日'];
           if (joinDateRaw) {
             if (typeof joinDateRaw === 'number') {
               // Excel serial date
@@ -238,15 +304,24 @@ export function EmployeeMaster() {
           const email = String(row['メール'] || row['メールアドレス'] || row['email'] || '').trim();
           const department = String(row['部署'] || row['所属'] || '').trim();
 
-          // 既存社員との重複チェック（名前で判定）
-          const existingMember = members.find((m) => m.name === name);
+          // 既存社員との重複チェック（社員コードまたは名前で判定）
+          const existingMember = employeeCode
+            ? members.find((m) => m.employeeCode === employeeCode)
+            : members.find((m) => m.name === name || m.nameJp === name);
 
           if (existingMember) {
             // 既存社員を更新
             updateMember({
               ...existingMember,
+              name,
               rank,
               status,
+              employeeCode: employeeCode || existingMember.employeeCode,
+              account: account || existingMember.account,
+              nameJp: nameJp || existingMember.nameJp,
+              nameEn: nameEn || existingMember.nameEn,
+              gender: gender ?? existingMember.gender,
+              birthYear: birthYear || existingMember.birthYear,
               joinDate: joinDate || existingMember.joinDate,
               leaveDate: leaveDate || existingMember.leaveDate,
               email: email || existingMember.email,
@@ -261,6 +336,12 @@ export function EmployeeMaster() {
               evaluation: emptyEvaluation,
               skills: emptySkills,
               status,
+              employeeCode: employeeCode || undefined,
+              account: account || undefined,
+              nameJp: nameJp || undefined,
+              nameEn: nameEn || undefined,
+              gender: gender || undefined,
+              birthYear: birthYear || undefined,
               joinDate: joinDate || undefined,
               leaveDate: leaveDate || undefined,
               email: email || undefined,
@@ -286,36 +367,43 @@ export function EmployeeMaster() {
     }
   };
 
-  // エクスポート処理
+  // エクスポート処理 (新フォーマット対応)
   const handleExport = () => {
-    const exportData = members.map((member) => ({
-      '氏名': member.name,
-      'JOBRANK': REVERSE_JOBRANK_MAP[member.rank] || member.rank,
-      'ステータス': REVERSE_STATUS_MAP[member.status || 'active'],
-      '入社日': member.joinDate || '',
-      '退社日': member.leaveDate || '',
-      'メール': member.email || '',
-      '部署': member.department || '',
+    const exportData = members.map((member, index) => ({
+      'No': index + 1,
+      'EmployeeCode': member.employeeCode || '',
+      'Fullname': member.nameEn || member.name || '',
+      'Account': member.account || '',
+      'Fullname_JP': member.nameJp || member.name || '',
+      'Fullname_VN': '', // 未対応
+      'JobRank': REVERSE_JOBRANK_MAP[member.rank] || member.rank,
+      'Sex': member.gender || '',
+      'Birthday': member.birthYear || '',
+      'FJPJoinedDate': member.joinDate || '',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
 
     // 列幅を設定
     worksheet['!cols'] = [
-      { wch: 15 }, // 氏名
-      { wch: 18 }, // JOBRANK
-      { wch: 10 }, // ステータス
-      { wch: 12 }, // 入社日
-      { wch: 12 }, // 退社日
-      { wch: 25 }, // メール
-      { wch: 20 }, // 部署
+      { wch: 5 },  // No
+      { wch: 14 }, // EmployeeCode
+      { wch: 25 }, // Fullname
+      { wch: 15 }, // Account
+      { wch: 15 }, // Fullname_JP
+      { wch: 15 }, // Fullname_VN
+      { wch: 10 }, // JobRank
+      { wch: 5 },  // Sex
+      { wch: 8 },  // Birthday
+      { wch: 12 }, // FJPJoinedDate
     ];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '社員マスタ');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'EmployeeList');
 
-    // ファイル名に年度を含める
-    const fileName = `社員マスタ_${currentYear}年度_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
+    // ファイル名に日時を含める
+    const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    const fileName = `EmployeeList_${timestamp}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -477,31 +565,40 @@ export function EmployeeMaster() {
         <table className="table">
           <thead>
             <tr>
-              <th>社員名</th>
-              <th>ランク</th>
-              <th>ステータス</th>
-              <th>入社日</th>
-              <th>メール</th>
-              <th>部署</th>
-              <th style={{ width: 80 }}>操作</th>
+              <th style={{ width: 90 }}>社員コード</th>
+              <th>氏名</th>
+              <th style={{ width: 100 }}>Account</th>
+              <th style={{ width: 130 }}>ランク</th>
+              <th style={{ width: 50 }}>性別</th>
+              <th style={{ width: 60 }}>生年</th>
+              <th style={{ width: 100 }}>入社日</th>
+              <th style={{ width: 80 }}>ステータス</th>
+              <th style={{ width: 70 }}>操作</th>
             </tr>
           </thead>
           <tbody>
             {filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="empty-row">
+                <td colSpan={9} className="empty-row">
                   該当する社員がいません
                 </td>
               </tr>
             ) : (
               filteredMembers.map((member) => (
                 <tr key={member.id} className={(member.status || 'active') === 'inactive' ? 'inactive-row' : ''}>
+                  <td className="code-cell">{member.employeeCode || '-'}</td>
                   <td>
                     <div className="member-info">
                       <div className="member-avatar">{member.name.charAt(0)}</div>
-                      <div className="member-name">{member.name}</div>
+                      <div className="member-name-cell">
+                        <div className="member-name">{member.name}</div>
+                        {member.nameEn && member.nameEn !== member.name && (
+                          <div className="member-name-en">{member.nameEn}</div>
+                        )}
+                      </div>
                     </div>
                   </td>
+                  <td className="account-cell">{member.account || '-'}</td>
                   <td>
                     <span
                       className="rank-badge"
@@ -510,15 +607,15 @@ export function EmployeeMaster() {
                       {RankLabels[member.rank]}
                     </span>
                   </td>
+                  <td className="center-cell">{member.gender || '-'}</td>
+                  <td className="center-cell">{member.birthYear || '-'}</td>
+                  <td>{member.joinDate || '-'}</td>
                   <td>
                     <span className={`status-badge ${member.status || 'active'}`}>
                       {getStatusIcon(member.status)}
                       {getStatusLabel(member.status)}
                     </span>
                   </td>
-                  <td>{member.joinDate || '-'}</td>
-                  <td>{member.email || '-'}</td>
-                  <td>{member.department || '-'}</td>
                   <td>
                     <div className="action-buttons">
                       <button onClick={() => openEditModal(member)} title="編集">
@@ -542,14 +639,46 @@ export function EmployeeMaster() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">{editingMember ? '社員編集' : '社員追加'}</h3>
 
-            <div className="form-group">
-              <label>名前 *</label>
-              <input
-                type="text"
-                value={formData.name || ''}
-                onChange={(e) => setFormData((f) => ({ ...f, name: e.target.value }))}
-                placeholder="氏名を入力"
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-group">
+                <label>社員コード</label>
+                <input
+                  type="text"
+                  value={formData.employeeCode || ''}
+                  onChange={(e) => setFormData((f) => ({ ...f, employeeCode: e.target.value }))}
+                  placeholder="例: EMP001"
+                />
+              </div>
+              <div className="form-group">
+                <label>Account</label>
+                <input
+                  type="text"
+                  value={formData.account || ''}
+                  onChange={(e) => setFormData((f) => ({ ...f, account: e.target.value }))}
+                  placeholder="例: yamada.taro"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-group">
+                <label>名前（日本語）*</label>
+                <input
+                  type="text"
+                  value={formData.name || ''}
+                  onChange={(e) => setFormData((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="山田 太郎"
+                />
+              </div>
+              <div className="form-group">
+                <label>名前（英語）</label>
+                <input
+                  type="text"
+                  value={formData.nameEn || ''}
+                  onChange={(e) => setFormData((f) => ({ ...f, nameEn: e.target.value }))}
+                  placeholder="Taro Yamada"
+                />
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -564,7 +693,6 @@ export function EmployeeMaster() {
                   ))}
                 </select>
               </div>
-
               <div className="form-group">
                 <label>ステータス</label>
                 <select
@@ -578,7 +706,29 @@ export function EmployeeMaster() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+              <div className="form-group">
+                <label>性別</label>
+                <select
+                  value={formData.gender || ''}
+                  onChange={(e) => setFormData((f) => ({ ...f, gender: (e.target.value || null) as Gender }))}
+                >
+                  <option value="">-</option>
+                  <option value="M">M</option>
+                  <option value="F">F</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>生年</label>
+                <input
+                  type="number"
+                  value={formData.birthYear || ''}
+                  onChange={(e) => setFormData((f) => ({ ...f, birthYear: e.target.value ? Number(e.target.value) : undefined }))}
+                  placeholder="1990"
+                  min={1950}
+                  max={2010}
+                />
+              </div>
               <div className="form-group">
                 <label>入社日</label>
                 <input
@@ -587,35 +737,6 @@ export function EmployeeMaster() {
                   onChange={(e) => setFormData((f) => ({ ...f, joinDate: e.target.value }))}
                 />
               </div>
-
-              <div className="form-group">
-                <label>退社日</label>
-                <input
-                  type="date"
-                  value={formData.leaveDate || ''}
-                  onChange={(e) => setFormData((f) => ({ ...f, leaveDate: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>メールアドレス</label>
-              <input
-                type="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData((f) => ({ ...f, email: e.target.value }))}
-                placeholder="example@company.com"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>部署</label>
-              <input
-                type="text"
-                value={formData.department || ''}
-                onChange={(e) => setFormData((f) => ({ ...f, department: e.target.value }))}
-                placeholder="例: コンサルティング部"
-              />
             </div>
 
             <div className="modal-actions">
