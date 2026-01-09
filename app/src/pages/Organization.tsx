@@ -17,18 +17,23 @@ export function Organization() {
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: '', leaderId: '', color: TeamColors[0] });
 
+  // 重複メンバーを除外したユニークなメンバーリスト
+  const uniqueMembers = members.filter((member, index, self) =>
+    index === self.findIndex((m) => m.id === member.id)
+  );
+
   const getTeamMemberCount = (teamId: string | null) =>
-    members.filter((m) => m.teamId === teamId).length;
+    uniqueMembers.filter((m) => m.teamId === teamId).length;
 
   const getTeamMembersByRank = (teamId: string | null, rank: Rank) =>
-    members.filter((m) => m.teamId === teamId && m.rank === rank);
+    uniqueMembers.filter((m) => m.teamId === teamId && m.rank === rank);
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, draggableId } = result;
     if (!destination) return;
 
     const memberId = draggableId;
-    const member = members.find((m) => m.id === memberId);
+    const member = uniqueMembers.find((m) => m.id === memberId);
     if (!member) return;
 
     if (destination.droppableId.startsWith('unassigned-')) {
@@ -173,12 +178,12 @@ export function Organization() {
               {RANKS.map((rank) => (
                 <tr key={rank}>
                   <td className="rank-name-large">{RankLabels[rank]}</td>
-                  <td className="rank-count-large">{members.filter((m) => m.rank === rank).length}</td>
+                  <td className="rank-count-large">{uniqueMembers.filter((m) => m.rank === rank).length}</td>
                 </tr>
               ))}
               <tr className="total-row">
                 <td className="rank-name-large">合計</td>
-                <td className="rank-count-large">{members.length}</td>
+                <td className="rank-count-large">{uniqueMembers.length}</td>
               </tr>
             </tbody>
           </table>
@@ -191,7 +196,7 @@ export function Organization() {
                 {RANKS.map((rank) => (
                   <tr key={rank}>
                     <td className="rank-name-large">{RankLabels[rank]}</td>
-                    <td className="rank-count-large">{members.filter((m) => m.teamId === team.id && m.rank === rank).length}</td>
+                    <td className="rank-count-large">{uniqueMembers.filter((m) => m.teamId === team.id && m.rank === rank).length}</td>
                   </tr>
                 ))}
                 <tr className="total-row">
