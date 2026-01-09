@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Users, BarChart3, Network, Home, Settings, Wallet } from 'lucide-react';
+import { Users, BarChart3, Network, Home, Settings, Wallet, Award } from 'lucide-react';
 import './Sidebar.css';
 
 export function Sidebar() {
@@ -20,7 +20,12 @@ export function Sidebar() {
 
         <NavLink to="/evaluation" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <BarChart3 size={20} />
-          <span>Member Evaluation</span>
+          <span>能力評価</span>
+        </NavLink>
+
+        <NavLink to="/yearly-evaluation" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Award size={20} />
+          <span>年度評価</span>
         </NavLink>
 
         <NavLink to="/skillmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>

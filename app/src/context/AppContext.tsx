@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import type { Member, Team, YearData, BudgetData, MemberSalary, NewHire, RankUnitPrice } from '../types';
+import type { Member, Team, YearData, BudgetData, MemberSalary, NewHire, RankUnitPrice, MemberYearlyEvaluation, YearlyGrade } from '../types';
 import { DefaultRankUnitPrices } from '../types';
 import { initialYearData } from '../data/initialData';
 
@@ -11,6 +11,7 @@ interface AppContextType {
   members: Member[];
   teams: Team[];
   budget: BudgetData | null;
+  yearlyEvaluations: MemberYearlyEvaluation[];
   updateMember: (member: Member) => void;
   addMember: (member: Omit<Member, 'id'>) => void;
   deleteMember: (id: string) => void;
@@ -26,13 +27,28 @@ interface AppContextType {
   updateNewHire: (hire: NewHire) => void;
   deleteNewHire: (id: string) => void;
   initializeBudget: () => void;
+  // 年度評価
+  updateYearlyEvaluation: (memberId: string, year: number, grade: YearlyGrade) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'insight-hrm-data';
+const YEARLY_EVAL_KEY = 'insight-hrm-yearly-eval';
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [yearlyEvaluations, setYearlyEvaluations] = useState<MemberYearlyEvaluation[]>(() => {
+    const saved = localStorage.getItem(YEARLY_EVAL_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
   const [allData, setAllData] = useState<YearData[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -61,6 +77,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
   }, [allData]);
+
+  useEffect(() => {
+    localStorage.setItem(YEARLY_EVAL_KEY, JSON.stringify(yearlyEvaluations));
+  }, [yearlyEvaluations]);
 
   const years = allData.map((d) => d.year).sort((a, b) => a - b);
 
@@ -289,6 +309,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [updateYearData]
   );
 
+  const updateYearlyEvaluation = useCallback(
+    (memberId: string, year: number, grade: YearlyGrade) => {
+      setYearlyEvaluations((prev) => {
+        const existingIndex = prev.findIndex((e) => e.memberId === memberId);
+        if (existingIndex >= 0) {
+          return prev.map((e, i) =>
+            i === existingIndex
+              ? { ...e, evaluations: { ...e.evaluations, [year]: grade } }
+              : e
+          );
+        } else {
+          return [...prev, { memberId, evaluations: { [year]: grade } }];
+        }
+      });
+    },
+    []
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -298,6 +336,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         members,
         teams,
         budget,
+        yearlyEvaluations,
         updateMember,
         addMember,
         deleteMember,
@@ -312,6 +351,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateNewHire,
         deleteNewHire,
         initializeBudget,
+        updateYearlyEvaluation,
       }}
     >
       {children}

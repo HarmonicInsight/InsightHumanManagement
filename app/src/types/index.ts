@@ -138,3 +138,19 @@ export const DefaultRankUnitPrices: RankUnitPrice[] = [
 ];
 
 export const DefaultAgentFeeRate = 35; // デフォルトエージェント費用率 35%
+
+// 年度評価関連
+export type YearlyGrade = 'S' | 'A' | 'B' | 'C' | 'D' | null;
+
+export interface MemberYearlyEvaluation {
+  memberId: string;
+  evaluations: Record<number, YearlyGrade>; // year -> grade
+}
+
+export const YearlyGradeColors: Record<string, string> = {
+  S: '#F59E0B',
+  A: '#3B82F6',
+  B: '#10B981',
+  C: '#6B7280',
+  D: '#EF4444',
+};

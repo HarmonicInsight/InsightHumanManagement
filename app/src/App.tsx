@@ -3,6 +3,7 @@ import { AppProvider } from './context/AppContext';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { Evaluation } from './pages/Evaluation';
+import { YearlyEvaluation } from './pages/YearlyEvaluation';
 import { SkillMap } from './pages/SkillMap';
 import { Organization } from './pages/Organization';
 import { Budget } from './pages/Budget';
@@ -17,6 +18,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/evaluation" element={<Evaluation />} />
+            <Route path="/yearly-evaluation" element={<YearlyEvaluation />} />
             <Route path="/skillmap" element={<SkillMap />} />
             <Route path="/organization" element={<Organization />} />
             <Route path="/budget" element={<Budget />} />

@@ -63,8 +63,8 @@ export function Evaluation() {
     <div className="main-content">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 className="page-title">メンバー評価</h1>
-          <p className="page-subtitle">パフォーマンス評価とフィードバック</p>
+          <h1 className="page-title">メンバの能力評価</h1>
+          <p className="page-subtitle">スキルとパフォーマンスの評価</p>
         </div>
         <YearSelector />
       </div>
@@ -146,7 +146,6 @@ export function Evaluation() {
                   スコア <SortIcon column="score" />
                 </div>
               </th>
-              <th>総評</th>
               <th style={{ width: 60 }}></th>
             </tr>
           </thead>
@@ -182,7 +181,6 @@ export function Evaluation() {
                     <span style={{ color: '#9CA3AF' }}>-</span>
                   )}
                 </td>
-                <td>{member.evaluation.summary}</td>
                 <td>
                   <button
                     onClick={() => setEditingMember(member)}
