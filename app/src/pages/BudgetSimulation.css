@@ -402,6 +402,93 @@
   cursor: not-allowed;
 }
 
+/* Highlight classes for comparison */
+.sim-summary-value.highlight {
+  color: var(--primary-color);
+}
+
+.comparison-description {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-left: auto;
+}
+
+.comparison-table .amount.highlight-sim {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.comparison-table .amount.highlight-budget {
+  color: #059669;
+  font-weight: 600;
+}
+
+/* Collapsible Header */
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.collapsible-header:hover {
+  background: var(--gray-50);
+}
+
+.collapsible-header .card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-detail-card .summary-badge {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.member-detail-card .summary-badge.ok {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.member-detail-card .summary-badge.ng {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+/* Member detail table highlights */
+.member-detail-table .amount-cell.highlight-sim {
+  color: var(--primary-color);
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.member-detail-table .amount-cell.highlight-budget {
+  color: #059669;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.member-detail-table .amount-cell.negative {
+  color: #EF4444;
+}
+
+.member-detail-table thead th small {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--gray-400);
+}
+
+.comparison-table thead th small {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--gray-400);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .sim-summary-cards {
