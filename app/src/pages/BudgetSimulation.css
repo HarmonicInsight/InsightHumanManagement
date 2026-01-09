@@ -95,6 +95,20 @@
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
+.pattern-comment-input {
+  width: 150px;
+  padding: 6px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.pattern-comment-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
 .btn-add-pattern {
   display: flex;
   align-items: center;
