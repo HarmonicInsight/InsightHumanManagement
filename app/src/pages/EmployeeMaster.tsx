@@ -165,10 +165,18 @@ export function EmployeeMaster() {
     <div className="main-content">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 className="page-title">社員マスタ</h1>
-          <p className="page-subtitle">{currentYear}年度 社員情報管理</p>
+          <h1 className="page-title">社員マスタ（{currentYear}年度）</h1>
+          <p className="page-subtitle">この年度の社員一覧です。年度を切り替えると別のデータになります。</p>
         </div>
         <YearSelector />
+      </div>
+
+      {/* 年度別データの説明 */}
+      <div className="year-info-banner">
+        <span className="year-badge">{currentYear}年度</span>
+        <span className="year-info-text">
+          社員の追加・削除はこの年度のみに反映されます。他の年度には影響しません。
+        </span>
       </div>
 
       {/* 統計カード */}
