@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Calculator } from 'lucide-react';
+import { Plus, Trash2, Calculator, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useApp } from '../context/AppContext';
 import { YearSelector } from '../components/YearSelector';
 import { RankLabels, RankColors, RankOrder, YearlyGradeColors } from '../types';
@@ -38,11 +39,13 @@ export function BudgetSimulation() {
   // シミュレーション用の評価データ（ローカル）
   const [simulationEvaluations, setSimulationEvaluations] = useState<Record<string, YearlyGrade>>({});
 
-  // 昇給率パターン（最大5つ）
+  // 昇給率パターン（5つ）
   const [patterns, setPatterns] = useState<RaisePattern[]>([
     { id: '1', name: 'パターン1', rates: { S: 10, A: 6, B: 4, C: 0 }, comment: '' },
     { id: '2', name: 'パターン2', rates: { S: 10, A: 5, B: 3, C: 0 }, comment: '' },
     { id: '3', name: 'パターン3', rates: { S: 8, A: 4, B: 2, C: 0 }, comment: '' },
+    { id: '4', name: 'パターン4', rates: { S: 6, A: 3, B: 2, C: 0 }, comment: '' },
+    { id: '5', name: 'パターン5', rates: { S: 5, A: 3, B: 1, C: 0 }, comment: '' },
   ]);
 
   // 標準給与合計（予算）を計算
@@ -216,6 +219,101 @@ export function BudgetSimulation() {
     return team?.name || '未所属';
   };
 
+  // Excel出力
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    // シート1: サマリー
+    const summaryData = [
+      ['予算シミュレーション結果', '', '', '', '', '', '', '', ''],
+      [`FY${currentYear}年度`, '', '', '', '', '', '', '', ''],
+      ['', '', '', '', '', '', '', '', ''],
+      ['■ 基本情報', '', '', '', '', '', '', '', ''],
+      ['メンバー数', `${members.length}名`, '', '', '', '', '', '', ''],
+      [`FY${String(currentYear).slice(2)}標準給与年額（予算）`, `${standardSalaryTotal.toLocaleString()}万円`, '', '', '', '', '', '', ''],
+      ['', '', '', '', '', '', '', '', ''],
+      ['■ 評価分布', '', '', '', '', '', '', '', ''],
+      ['S評価', `${evaluationCounts['S']}名`, 'A評価', `${evaluationCounts['A']}名`, 'B評価', `${evaluationCounts['B']}名`, 'C評価', `${evaluationCounts['C']}名`, ''],
+      ['', '', '', '', '', '', '', '', ''],
+      ['■ パターン比較', '', '', '', '', '', '', '', ''],
+      ['パターン名', 'S昇給率', 'A昇給率', 'B昇給率', 'C昇給率', '現在給与合計', '翌年給与合計', '予算差額', '判定'],
+    ];
+
+    simulationResults.forEach(result => {
+      summaryData.push([
+        result.pattern.name,
+        `${result.pattern.rates['S']}%`,
+        `${result.pattern.rates['A']}%`,
+        `${result.pattern.rates['B']}%`,
+        `${result.pattern.rates['C']}%`,
+        `${result.totalCurrentSalary.toLocaleString()}万円`,
+        `${result.totalNextYearSalary.toLocaleString()}万円`,
+        `${result.difference > 0 ? '+' : ''}${result.difference.toLocaleString()}万円`,
+        result.isWithinBudget ? '予算内' : '予算超過',
+      ]);
+    });
+
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    wsSummary['!cols'] = [
+      { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+      { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 12 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'サマリー');
+
+    // シート2以降: 各パターンの詳細
+    simulationResults.forEach((result) => {
+      const detailData = [
+        [`${result.pattern.name} - メンバー別詳細`, '', '', '', '', '', '', '', ''],
+        [`昇給率設定: S=${result.pattern.rates['S']}%, A=${result.pattern.rates['A']}%, B=${result.pattern.rates['B']}%, C=${result.pattern.rates['C']}%`, '', '', '', '', '', '', '', ''],
+        [result.pattern.comment ? `コメント: ${result.pattern.comment}` : '', '', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', ''],
+        ['No', 'メンバー', 'チーム', 'ランク', '現在給与(月)', '年度評価', `FY${String(currentYear + 1).slice(2)}標準給与年額`, '昇給率', '翌年給与(月)', '年間増加額'],
+      ];
+
+      result.memberResults.forEach((mr, i) => {
+        const annualIncrease = (mr.nextYearSalary - mr.currentSalary) * 12;
+        detailData.push([
+          String(i + 1),
+          mr.member.name,
+          getTeamName(mr.member.teamId),
+          RankLabels[mr.member.rank],
+          `${mr.currentSalary}万円`,
+          mr.evaluation || 'B',
+          `${getMemberStandardAnnualSalary(mr.member.rank).toLocaleString()}万円`,
+          `${mr.raiseRate}%`,
+          `${mr.nextYearSalary}万円`,
+          `${annualIncrease > 0 ? '+' : ''}${annualIncrease.toLocaleString()}万円`,
+        ]);
+      });
+
+      // 合計行
+      const totalIncrease = result.totalNextYearSalary - result.totalCurrentSalary;
+      detailData.push(['', '', '', '', '', '', '', '', '', '']);
+      detailData.push([
+        '',
+        '合計',
+        '',
+        '',
+        `${result.totalCurrentSalary.toLocaleString()}万円`,
+        '',
+        `${standardSalaryTotal.toLocaleString()}万円`,
+        '',
+        `${result.totalNextYearSalary.toLocaleString()}万円`,
+        `${totalIncrease > 0 ? '+' : ''}${totalIncrease.toLocaleString()}万円`,
+      ]);
+
+      const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
+      wsDetail['!cols'] = [
+        { wch: 5 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 15 },
+        { wch: 10 }, { wch: 22 }, { wch: 10 }, { wch: 15 }, { wch: 15 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsDetail, result.pattern.name.slice(0, 31));
+    });
+
+    // ダウンロード
+    XLSX.writeFile(wb, `予算シミュレーション_FY${currentYear}.xlsx`);
+  };
+
   return (
     <div className="main-content">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -223,7 +321,13 @@ export function BudgetSimulation() {
           <h1 className="page-title">予算シミュレーション</h1>
           <p className="page-subtitle">評価に応じた昇給率で翌年給与を試算（変更は保存されません）</p>
         </div>
-        <YearSelector />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button className="btn-export-excel" onClick={exportToExcel}>
+            <Download size={16} />
+            Excel出力
+          </button>
+          <YearSelector />
+        </div>
       </div>
 
       {/* サマリーカード */}
@@ -367,115 +471,134 @@ export function BudgetSimulation() {
         </div>
       </div>
 
-      {/* メンバー別詳細（最初のパターン） */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">メンバー別詳細（{patterns[0]?.name}）</h3>
-        </div>
-        <div className="member-detail-table-container">
-          <table className="member-detail-table">
-            <thead>
-              <tr>
-                <th>メンバー</th>
-                <th>チーム</th>
-                <th>ランク</th>
-                <th>現在給与</th>
-                <th>年度評価</th>
-                <th>FY{String(currentYear + 1).slice(2)}標準給与年額（予算）</th>
-                <th>昇給率</th>
-                <th>翌年給与</th>
-                <th>年間増加額</th>
-              </tr>
-            </thead>
-            <tbody>
-              {simulationResults[0]?.memberResults.map(result => {
-                const annualIncrease = (result.nextYearSalary - result.currentSalary) * 12;
-                return (
-                  <tr key={result.member.id}>
-                    <td>
-                      <div className="member-info-cell">
-                        <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
-                          {result.member.name.charAt(0)}
+      {/* メンバー別詳細（全パターン） */}
+      {simulationResults.map((result, patternIndex) => (
+        <div key={result.pattern.id} className="card">
+          <div className="card-header">
+            <h3 className="card-title">
+              メンバー別詳細（{result.pattern.name}）
+              <span className="pattern-rates-badge">
+                S:{result.pattern.rates['S']}% A:{result.pattern.rates['A']}% B:{result.pattern.rates['B']}% C:{result.pattern.rates['C']}%
+              </span>
+            </h3>
+          </div>
+          <div className="member-detail-table-container">
+            <table className="member-detail-table">
+              <thead>
+                <tr>
+                  <th>メンバー</th>
+                  <th>チーム</th>
+                  <th>ランク</th>
+                  <th>現在給与</th>
+                  <th>年度評価</th>
+                  <th>FY{String(currentYear + 1).slice(2)}標準給与年額（予算）</th>
+                  <th>昇給率</th>
+                  <th>翌年給与</th>
+                  <th>年間増加額</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.memberResults.map(mr => {
+                  const annualIncrease = (mr.nextYearSalary - mr.currentSalary) * 12;
+                  return (
+                    <tr key={mr.member.id}>
+                      <td>
+                        <div className="member-info-cell">
+                          <div className="member-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
+                            {mr.member.name.charAt(0)}
+                          </div>
+                          <span>{mr.member.name}</span>
                         </div>
-                        <span>{result.member.name}</span>
-                      </div>
-                    </td>
-                    <td>{getTeamName(result.member.teamId)}</td>
-                    <td>
-                      <span
-                        className="rank-badge"
-                        style={{ background: `${RankColors[result.member.rank]}20`, color: RankColors[result.member.rank] }}
-                      >
-                        {RankLabels[result.member.rank]}
-                      </span>
-                    </td>
-                    <td className="amount-cell">
-                      <input
-                        type="number"
-                        className="salary-input-sim"
-                        value={simulationSalaries[result.member.id] ?? result.currentSalary}
-                        onChange={(e) => setSimulationSalaries(prev => ({
-                          ...prev,
-                          [result.member.id]: Number(e.target.value) || 0
-                        }))}
-                      />
-                      <span className="unit">万円</span>
-                    </td>
-                    <td>
-                      <select
-                        className="eval-select"
-                        value={getMemberEvaluation(result.member.id) || 'B'}
-                        onChange={(e) => setSimulationEvaluations(prev => ({
-                          ...prev,
-                          [result.member.id]: e.target.value as YearlyGrade
-                        }))}
-                        style={{ color: YearlyGradeColors[result.evaluation || 'B'] }}
-                      >
-                        <option value="S">S</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                      </select>
-                    </td>
-                    <td className="amount-cell">
-                      {getMemberStandardAnnualSalary(result.member.rank).toLocaleString()}万円
-                    </td>
-                    <td className="rate-cell">
-                      <span className="raise-rate">{result.raiseRate}%</span>
-                    </td>
-                    <td className="amount-cell next-year">
-                      {result.nextYearSalary.toLocaleString()}万円
-                    </td>
-                    <td className={`amount-cell ${annualIncrease > 0 ? 'positive' : ''}`}>
-                      {annualIncrease > 0 ? '+' : ''}{annualIncrease.toLocaleString()}万円
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="total-row">
-                <td colSpan={3}>合計</td>
-                <td className="amount-cell">
-                  {simulationResults[0]?.totalCurrentSalary.toLocaleString()}万円
-                </td>
-                <td></td>
-                <td className="amount-cell">
-                  {standardSalaryTotal.toLocaleString()}万円
-                </td>
-                <td></td>
-                <td className="amount-cell next-year">
-                  {simulationResults[0]?.totalNextYearSalary.toLocaleString()}万円
-                </td>
-                <td className={`amount-cell ${(simulationResults[0]?.totalNextYearSalary - simulationResults[0]?.totalCurrentSalary) > 0 ? 'positive' : ''}`}>
-                  {(simulationResults[0]?.totalNextYearSalary - simulationResults[0]?.totalCurrentSalary) > 0 ? '+' : ''}
-                  {((simulationResults[0]?.totalNextYearSalary || 0) - (simulationResults[0]?.totalCurrentSalary || 0)).toLocaleString()}万円
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+                      </td>
+                      <td>{getTeamName(mr.member.teamId)}</td>
+                      <td>
+                        <span
+                          className="rank-badge"
+                          style={{ background: `${RankColors[mr.member.rank]}20`, color: RankColors[mr.member.rank] }}
+                        >
+                          {RankLabels[mr.member.rank]}
+                        </span>
+                      </td>
+                      <td className="amount-cell">
+                        {patternIndex === 0 ? (
+                          <>
+                            <input
+                              type="number"
+                              className="salary-input-sim"
+                              value={simulationSalaries[mr.member.id] ?? mr.currentSalary}
+                              onChange={(e) => setSimulationSalaries(prev => ({
+                                ...prev,
+                                [mr.member.id]: Number(e.target.value) || 0
+                              }))}
+                            />
+                            <span className="unit">万円</span>
+                          </>
+                        ) : (
+                          <>{mr.currentSalary.toLocaleString()}万円</>
+                        )}
+                      </td>
+                      <td>
+                        {patternIndex === 0 ? (
+                          <select
+                            className="eval-select"
+                            value={getMemberEvaluation(mr.member.id) || 'B'}
+                            onChange={(e) => setSimulationEvaluations(prev => ({
+                              ...prev,
+                              [mr.member.id]: e.target.value as YearlyGrade
+                            }))}
+                            style={{ color: YearlyGradeColors[mr.evaluation || 'B'] }}
+                          >
+                            <option value="S">S</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                          </select>
+                        ) : (
+                          <span style={{ color: YearlyGradeColors[mr.evaluation || 'B'], fontWeight: 600 }}>
+                            {mr.evaluation || 'B'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="amount-cell">
+                        {getMemberStandardAnnualSalary(mr.member.rank).toLocaleString()}万円
+                      </td>
+                      <td className="rate-cell">
+                        <span className="raise-rate">{mr.raiseRate}%</span>
+                      </td>
+                      <td className="amount-cell next-year">
+                        {mr.nextYearSalary.toLocaleString()}万円
+                      </td>
+                      <td className={`amount-cell ${annualIncrease > 0 ? 'positive' : ''}`}>
+                        {annualIncrease > 0 ? '+' : ''}{annualIncrease.toLocaleString()}万円
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="total-row">
+                  <td colSpan={3}>合計</td>
+                  <td className="amount-cell">
+                    {result.totalCurrentSalary.toLocaleString()}万円
+                  </td>
+                  <td></td>
+                  <td className="amount-cell">
+                    {standardSalaryTotal.toLocaleString()}万円
+                  </td>
+                  <td></td>
+                  <td className="amount-cell next-year">
+                    {result.totalNextYearSalary.toLocaleString()}万円
+                  </td>
+                  <td className={`amount-cell ${(result.totalNextYearSalary - result.totalCurrentSalary) > 0 ? 'positive' : ''}`}>
+                    {(result.totalNextYearSalary - result.totalCurrentSalary) > 0 ? '+' : ''}
+                    {(result.totalNextYearSalary - result.totalCurrentSalary).toLocaleString()}万円
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }

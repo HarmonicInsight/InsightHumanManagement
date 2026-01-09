@@ -364,6 +364,44 @@
   gap: 8px;
 }
 
+/* Excel Export Button */
+.btn-export-excel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #10B981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-export-excel:hover {
+  background: #059669;
+}
+
+/* Pattern Rates Badge */
+.pattern-rates-badge {
+  display: inline-block;
+  margin-left: 12px;
+  padding: 4px 10px;
+  background: var(--gray-100);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gray-600);
+}
+
+/* Add Pattern Button Disabled */
+.btn-add-pattern:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .sim-summary-cards {
