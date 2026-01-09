@@ -1,18 +1,24 @@
 import { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { YearSelector } from '../components/YearSelector';
-import { RankLabels, RankColors } from '../types';
+import { RankLabels, DefaultRankUnitPrices } from '../types';
 import type { Rank } from '../types';
 import './UnitPriceMaster.css';
 
 const RANKS: Rank[] = ['SMGR', 'MGR', 'Scon', 'CONS'];
+const RANK_SHORT_LABELS: Record<Rank, string> = {
+  'SMGR': 'SM',
+  'MGR': 'M',
+  'Scon': 'SC',
+  'CONS': 'C',
+};
 
 export function UnitPriceMaster() {
   const {
-    currentYear,
-    budget,
+    years,
+    getBudgetByYear,
+    updateRankUnitPricesByYear,
     initializeBudget,
-    updateRankUnitPrices,
+    budget,
   } = useApp();
 
   useEffect(() => {
@@ -21,131 +27,98 @@ export function UnitPriceMaster() {
     }
   }, [budget, initializeBudget]);
 
-  if (!budget) {
-    return <div className="main-content">読み込み中...</div>;
-  }
+  // 年度を降順にソート（新しい年度が左）
+  const sortedYears = [...years].sort((a, b) => b - a);
 
-  const rankUnitPrices = budget.rankUnitPrices;
-
-  const getUnitPrice = (rank: Rank): number => {
-    const price = rankUnitPrices.find((p) => p.rank === rank);
+  const getUnitPrice = (year: number, rank: Rank): number => {
+    const budgetData = getBudgetByYear(year);
+    if (!budgetData) return 0;
+    const price = budgetData.rankUnitPrices.find((p) => p.rank === rank);
     return price?.unitPrice || 0;
   };
 
-  const handleUnitPriceChange = (rank: Rank, value: string) => {
+  const handleUnitPriceChange = (year: number, rank: Rank, value: string) => {
+    const budgetData = getBudgetByYear(year);
+    const currentPrices = budgetData?.rankUnitPrices || [...DefaultRankUnitPrices];
     const newPrice = Number(value) || 0;
-    const updated = rankUnitPrices.map((p) =>
+    const updated = currentPrices.map((p) =>
       p.rank === rank ? { ...p, unitPrice: newPrice } : p
     );
-    updateRankUnitPrices(updated);
+    updateRankUnitPricesByYear(year, updated);
   };
 
-  // 年間合計
-  const totalAnnual = RANKS.reduce((sum, rank) => sum + getUnitPrice(rank) * 12, 0);
+  // 年間コスト計算
+  const getYearlyTotal = (year: number): number => {
+    return RANKS.reduce((sum, rank) => sum + getUnitPrice(year, rank) * 12, 0);
+  };
 
   return (
     <div className="main-content">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 className="page-title">単価マスタ</h1>
-          <p className="page-subtitle">ランク別の標準単価を年度ごとに管理</p>
-        </div>
-        <YearSelector />
+      <div className="page-header">
+        <h1 className="page-title">単価マスタ</h1>
+        <p className="page-subtitle">ランク別の標準単価を年度ごとに管理</p>
       </div>
 
-      {/* 年度表示 */}
-      <div className="year-info-banner">
-        <span className="year-badge">FY{String(currentYear).slice(2)}</span>
-        <span className="year-info-text">
-          {currentYear}年度の単価設定
-        </span>
-      </div>
-
-      {/* 単価マスタカード */}
+      {/* 単価テーブル */}
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">ランク別単価（月額）</h3>
-          <span className="card-subtitle">※変更は自動保存されます</span>
+          <h3 className="card-title">ランク別月額単価（万円）</h3>
         </div>
-        <div className="unit-price-master-grid">
-          {RANKS.map((rank) => {
-            const unitPrice = getUnitPrice(rank);
-            const annual = unitPrice * 12;
-            return (
-              <div key={rank} className="unit-price-master-item" style={{ borderLeftColor: RankColors[rank] }}>
-                <div className="unit-price-master-header">
-                  <span className="rank-badge" style={{ background: `${RankColors[rank]}20`, color: RankColors[rank] }}>
-                    {RankLabels[rank]}
-                  </span>
-                </div>
-                <div className="unit-price-master-body">
-                  <div className="unit-price-input-group">
-                    <label>月額単価</label>
-                    <div className="unit-price-input">
-                      <input
-                        type="number"
-                        value={unitPrice || ''}
-                        onChange={(e) => handleUnitPriceChange(rank, e.target.value)}
-                        placeholder="0"
-                      />
-                      <span className="unit">万円</span>
-                    </div>
-                  </div>
-                  <div className="unit-price-annual">
-                    <span className="annual-label">年間</span>
-                    <span className="annual-value">{annual.toLocaleString()}万円</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* サマリー */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">単価サマリー</h3>
-        </div>
-        <div className="unit-price-summary">
-          <table className="summary-table">
+        <div className="unit-price-table-container">
+          <table className="unit-price-table">
             <thead>
               <tr>
-                <th>ランク</th>
-                <th>月額単価</th>
-                <th>年間単価</th>
+                <th className="rank-header">ランク</th>
+                {sortedYears.map((year) => (
+                  <th key={year} className="year-header">
+                    <span className="year-label">FY{String(year).slice(2)}</span>
+                    <span className="year-sublabel">月額</span>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {RANKS.map((rank) => {
-                const unitPrice = getUnitPrice(rank);
-                return (
-                  <tr key={rank}>
-                    <td>
-                      <span
-                        className="rank-badge"
-                        style={{ background: `${RankColors[rank]}20`, color: RankColors[rank] }}
-                      >
-                        {RankLabels[rank]}
-                      </span>
+              {RANKS.map((rank) => (
+                <tr key={rank}>
+                  <td className="rank-cell">
+                    <span className="rank-short">{RANK_SHORT_LABELS[rank]}</span>
+                    <span className="rank-full">{RankLabels[rank]}</span>
+                  </td>
+                  {sortedYears.map((year) => (
+                    <td key={year} className="price-cell">
+                      <input
+                        type="number"
+                        className="price-input"
+                        value={getUnitPrice(year, rank) || ''}
+                        onChange={(e) => handleUnitPriceChange(year, rank, e.target.value)}
+                        placeholder="0"
+                      />
                     </td>
-                    <td className="price-cell">{unitPrice.toLocaleString()}万円</td>
-                    <td className="price-cell">{(unitPrice * 12).toLocaleString()}万円</td>
-                  </tr>
-                );
-              })}
+                  ))}
+                </tr>
+              ))}
             </tbody>
             <tfoot>
-              <tr>
-                <td className="footer-label">合計（全ランク）</td>
-                <td className="footer-value">
-                  {RANKS.reduce((sum, rank) => sum + getUnitPrice(rank), 0).toLocaleString()}万円
+              <tr className="total-row">
+                <td className="rank-cell">
+                  <span className="rank-short">合計</span>
+                  <span className="rank-full">年間コスト</span>
                 </td>
-                <td className="footer-value">{totalAnnual.toLocaleString()}万円</td>
+                {sortedYears.map((year) => (
+                  <td key={year} className="total-cell">
+                    {getYearlyTotal(year).toLocaleString()}
+                  </td>
+                ))}
               </tr>
             </tfoot>
           </table>
         </div>
+      </div>
+
+      {/* 説明 */}
+      <div className="info-note">
+        <p>※ 単価は万円単位で入力してください</p>
+        <p>※ 変更は自動保存されます</p>
       </div>
     </div>
   );
