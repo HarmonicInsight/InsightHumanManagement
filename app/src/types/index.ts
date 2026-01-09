@@ -1,4 +1,4 @@
-export type Rank = 'MGR' | 'Scon' | 'CONS';
+export type Rank = 'CONS' | 'Scon' | 'MGR' | 'SMGR';
 
 export type Grade = 'S' | 'A' | 'B' | 'C' | null;
 
@@ -6,6 +6,7 @@ export interface Member {
   id: string;
   name: string;
   rank: Rank;
+  teamId: string | null;
   evaluation: Evaluation;
   skills: Skills;
 }
@@ -27,16 +28,38 @@ export interface Skills {
   independence: number | null;
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  leaderId: string | null;
+  color: string;
+}
+
+export interface YearData {
+  year: number;
+  members: Member[];
+  teams: Team[];
+}
+
 export const RankLabels: Record<Rank, string> = {
-  MGR: 'マネージャー',
-  Scon: 'シニアコンサルタント',
   CONS: 'コンサルタント',
+  Scon: 'シニアコンサルタント',
+  MGR: 'マネージャー',
+  SMGR: 'シニアマネージャー',
+};
+
+export const RankOrder: Record<Rank, number> = {
+  CONS: 1,
+  Scon: 2,
+  MGR: 3,
+  SMGR: 4,
 };
 
 export const RankColors: Record<Rank, string> = {
-  MGR: '#8B5CF6',
-  Scon: '#3B82F6',
   CONS: '#10B981',
+  Scon: '#3B82F6',
+  MGR: '#8B5CF6',
+  SMGR: '#EC4899',
 };
 
 export const GradeColors: Record<string, string> = {
@@ -61,3 +84,14 @@ export const SkillCategories = {
   managerPlus: ['sales', 'management'] as (keyof Skills)[],
   seniorPlus: ['responsibility', 'independence'] as (keyof Skills)[],
 };
+
+export const TeamColors = [
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+  '#06B6D4',
+  '#84CC16',
+];
