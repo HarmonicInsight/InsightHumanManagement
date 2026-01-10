@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { Network, Settings, Wallet, Award, UserCog, Radar, Calculator, TrendingUp } from 'lucide-react';
+import { Network, Settings, Wallet, Award, UserCog, Radar, Calculator, TrendingUp, LayoutDashboard, FileBarChart } from 'lucide-react';
+import { GlobalSearch } from './GlobalSearch';
 import './Sidebar.css';
 
 export function Sidebar() {
@@ -7,15 +8,21 @@ export function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="logo">
-          <div className="logo-icon">M</div>
-          <span className="logo-text">メンバ管理・予算管理</span>
+          <div className="logo-icon">I</div>
+          <span className="logo-text">InsightHRM</span>
         </div>
+        <GlobalSearch />
       </div>
 
       <nav className="sidebar-nav">
+        <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end>
+          <LayoutDashboard size={20} />
+          <span>ダッシュボード</span>
+        </NavLink>
+
         <div className="nav-section">マスタ管理</div>
 
-        <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end>
+        <NavLink to="/employees" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <UserCog size={20} />
           <span>社員マスタ</span>
         </NavLink>
@@ -42,7 +49,7 @@ export function Sidebar() {
           <span>予算シミュレーション</span>
         </NavLink>
 
-        <div className="nav-section">評価・スキル</div>
+        <div className="nav-section">評価・分析</div>
 
         <NavLink to="/skillmap" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <Radar size={20} />
@@ -53,12 +60,17 @@ export function Sidebar() {
           <Award size={20} />
           <span>年度評価</span>
         </NavLink>
+
+        <NavLink to="/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <FileBarChart size={20} />
+          <span>レポート</span>
+        </NavLink>
       </nav>
 
       <div className="sidebar-footer">
-        <NavLink to="/settings" className="nav-item">
+        <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
           <Settings size={20} />
-          <span>Settings</span>
+          <span>設定</span>
         </NavLink>
       </div>
     </aside>
